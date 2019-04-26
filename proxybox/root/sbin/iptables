@@ -1,0 +1,10 @@
+#!/bin/bash
+
+SQUID_IP=10.0.0.1
+SOURCE_IP=10.0.0.8
+
+iptables -t mangle -F PREROUTING
+iptables -t nat -F PREROUTING
+iptables -A PREROUTING -t mangle -p tcp -i enx00249b0ce77f --source $SOURCE_IP -j MARK --set-mark 111
+iptables -A PREROUTING -t nat -p tcp -m mark --mark 111 --source $SOURCE_IP --dport 1:3127     -j DNAT --to-destination $SQUID_IP:3131
+iptables -A PREROUTING -t nat -p tcp -m mark --mark 111 --source $SOURCE_IP --dport 3132:65535 -j DNAT --to-destination $SQUID_IP:3131

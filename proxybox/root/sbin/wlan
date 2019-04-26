@@ -1,0 +1,17 @@
+#!/bin/bash
+
+case "$1" in
+  start)
+    ifconfig wlp1s0 up
+    nohup wpa_supplicant -d -iwlp1s0 -c/etc/wpa_supplicant.conf -Dwext -f/var/log/wpa_supplicant_custom.log &
+    pump -i wlp1s0 -d
+    ;;
+  stop)
+    killall pump
+    killall wpa_supplicant
+    ;;
+  *)
+    cat $0
+    exit 1
+    ;;
+esac

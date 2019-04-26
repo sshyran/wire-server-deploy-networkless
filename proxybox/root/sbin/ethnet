@@ -1,0 +1,13 @@
+#!/bin/bash
+
+case "$1" in
+  start)
+    ifconfig enx00249b0ce77f up 10.0.0.1
+    systemctl restart isc-dhcp-server
+    systemctl restart dnsmasq
+    ;;
+  *)
+    cat $0
+    exit 1
+    ;;
+esac
