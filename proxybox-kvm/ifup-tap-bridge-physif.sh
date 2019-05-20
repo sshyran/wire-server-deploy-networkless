@@ -3,7 +3,7 @@
 IP="/sbin/ip"
 IFCONFIG="/sbin/ifconfig"
 SUDO="/usr/bin/sudo"
-
+DHCLIENT="/sbin/dhclient"
 
 {
 
@@ -25,6 +25,11 @@ else
 	$SUDO $IP link set $1 up promisc on
         $SUDO $BRCTL addif $BRIDGE $1
         $SUDO $BRCTL addif $BRIDGE $PHYSIF
+	if [ "$SHAREDIF" -eq "0" ] ; then
+	    # FIXME: assumes DHCP, assumes all kind of things.
+	    $SUDO $DHCLIENT -r $PHYSIF
+	    $SUDO $DHCLIENT -i $BRIDGE
+	fi
         $SUDO $IP link set $PHYSIF up
         $SUDO $IP link set $BRIDGE up
         if [ "$USEDHCP" -eq "0" ] ; then 
