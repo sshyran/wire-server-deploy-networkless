@@ -1,22 +1,48 @@
-# two tap devices. tap0 to go to the local system, tap1 for the ethernet interface.
-#sudo tunctl -t tap0 -u demo
+#!/bin/bash
+
 IP="/sbin/ip"
 SUDO="/usr/bin/sudo"
 
 USER=`whoami`
 
-$SUDO $IP tuntap add dev tap0 mode tap user $USER
-$SUDO $IP tuntap add dev tap1 mode tap user $USER
+# The interface definitions. Comment out the ones you do not want to use, and change the last three octets of the MACs of the ones you do want to use.
+## talk to the local machine on a private interface.
+BR0="-netdev tap,id=n1,ifname=tap0,script=./ifup-tap-bridge.sh,downscript=./ifdown-tap-bridge.sh -device rtl8139,netdev=n1"
+## talk to a physical ethernet port.
+BR1="-netdev tap,id=n2,ifname=tap1,script=./ifup-tap-bridge-physif.sh,downscript=./ifdown-tap-bridge-physif.sh -device rtl8139,netdev=n2"
 
+# Uncomment if you want to use the ncurses frontend, EG, you are trying to run this without a GUI.
+#CURSES="-curses"
+
+# The CDROM image. Used for installing.
+CDROM=ubuntu-18.04.02-live-server-amd64.iso
+
+# The disk image.
+DISK=proxybox.img
+
+# You should not have to modify anything below this line.
+
+#=====================================LINE================================
+
+if [ -n "$BR0" ] ; then
+    $SUDO $IP tuntap add dev tap0 mode tap user $USER
+fi
+if [ -n "$BR1" ] ; then
+    $SUDO $IP tuntap add dev tap1 mode tap user $USER
+fi
+
+# boot from the CDROM if the user did not specify.
 if [ -z "$DRIVE" ] ; then
     DRIVE=d
 fi
 
-/usr/bin/kvm -m 1024 -boot $DRIVE -drive file=proxybox.img,index=0,media=disk,format=raw -drive file=ubuntu-18.04.2-live-server-amd64.iso,index=1,media=cdrom -rtc base=localtime -netdev tap,id=n1,ifname=tap0,script=./ifup-tap-bridge.sh,downscript=./ifdown-tap-bridge.sh -device rtl8139,netdev=n1 -netdev tap,id=n2,ifname=tap1,script=./ifup-tap-bridge-physif.sh,downscript=./ifdown-tap-bridge-physif.sh -device rtl8139,netdev=n2
+/usr/bin/kvm -m 1024 -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $BR0 $BR1 $CURSES
 
-#-net nic,macaddr=52:54:00:12:35:A,model=rtl8139 -net tap,ifname=tap0,script=./ifup-tap-bridge.sh,downscript=./ifdown-tap-bridge.sh  -net nic,macaddr=52:54:00:12:35:B,model=rtl8139 -net tap,ifname=tap1,script=./ifup-tap-bridge-physif.sh,downscript=./ifdown-tap-bridge-physif.sh  
+if [ -n "$BR1" ] ; then
+    $SUDO ip tuntap del dev tap1 mode tap
+fi
+if [ -n "$BR0" ] ; then
+    $SUDO ip tuntap del dev tap0 mode tap
+fi
 
-$SUDO ip tuntap del dev tap1 mode tap
-$SUDO ip tuntap del dev tap0 mode tap
 
-#-net nic,macaddr=52:54:00:12:35:A,model=rtl8139 -net tap,script=./ifup-bridge.sh,downscript=./ifdown-bridge.sh 

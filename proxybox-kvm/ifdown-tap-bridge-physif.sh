@@ -5,7 +5,12 @@ SUDO="/usr/bin/sudo"
 
 . ./tap-bridge-physif-vars.sh
 
-$SUDO $IFCONFIG $1 0.0.0.0 promisc down
+if [ "$SHAREDIF" eq "0" ] ; then
+    echo -n ""
+else
+    $SUDO $IFCONFIG $1 0.0.0.0 promisc down
+fi
+
 $SUDO $IFCONFIG $PHYSIF down
 
 # remove ourself from the bridge.
