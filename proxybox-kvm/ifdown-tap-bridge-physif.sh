@@ -5,13 +5,16 @@ SUDO="/usr/bin/sudo"
 
 . ./tap-bridge-physif-vars.sh
 
-if [ "$SHAREDIF" eq "0" ] ; then
+if [ "$SHAREDIF" -eq "0" ] ; then
     echo -n ""
 else
-    $SUDO $IP link set $1 down promisc off
+    # remove the physical device from the bridge.
+    $SUDO $BRCTL delif $BRIDGE $PHYSIF
+    # shut down the physical device.
+    $SUDO $IFCONFIG $PHYSIF down
 fi
 
-$SUDO $IFCONFIG $PHYSIF down
+$SUDO $IP link set $1 down promisc off
 
 # remove ourself from the bridge.
 $SUDO $BRCTL delif $BRIDGE $1
@@ -19,14 +22,10 @@ $SUDO $BRCTL delif $BRIDGE $1
 # this script is not responsible for destroying the tap device.
 #ip tuntap del dev $1
 
-BRIDGEDEV=`$SUDO $BRCTL show|grep -E ^"$BRIDGE" | grep tap`
-
+BRIDGEDEV=`$SUDO $BRCTL show $BRIDGE | grep tap`
 
 if [ -z "$BRIDGEDEV" ] ; then
     {
-	# remove the physical device from the bridge.
-	$SUDO $BRCTL delif $BRIDGE $PHYSIF
-
 	# we are the last one out. burn the bridge.
         $SUDO $IFCONFIG $BRIDGE down
         $SUDO $BRCTL delif $BRIDGE $1
