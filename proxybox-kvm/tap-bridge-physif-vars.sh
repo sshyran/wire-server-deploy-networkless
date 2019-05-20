@@ -11,7 +11,7 @@ USEDNS=1
 HOSTROUTE=1
 
 # 0 if the interface is shared with the OS, 1 if the OS does not manage the physical interface.
-SHAREDIF=0
+SHAREDIF=1
 
 # only matters if HOSTROUTE is 0.
 BRIDGEIP=172.16.0.1
