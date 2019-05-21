@@ -1,12 +1,12 @@
 This repo contains tools for using the [docker-squid4](https://github.com/wireapp/docker-squid4) docker image to set up a completely transparent proxy host.
 This host is to proxy all traffic during a WIRE installation, so that the exact same installation can be performed from cache, without internet access.
 
-### status
+# status
 
 experimental
-FIXME: more DHCP leases for the nodes.
 
-### setting up proxybox
+# Inspiration
+
 Sources:
 - https://www.ascinc.com/blog/linux/how-to-build-a-simple-router-with-ubuntu-server-18-04-1-lts-bionic-beaver/
 - https://stackoverflow.com/questions/20446930/how-to-put-wildcard-entry-into-etc-hosts/20446931#20446931
@@ -15,7 +15,7 @@ Sources:
 - http://roberts.bplaced.net/index.php/linux-guides/centos-6-guides/proxy-server/squid-transparent-proxy-http-https
 
 
-#### Wireless
+## Wireless Networking
 Install a few extra packages if you are using wireless networking:
 
 ```sh
@@ -31,8 +31,11 @@ netplan generate && netplan apply
 /root/sbin/ethnet start
 /root/sbin/iptables
 ```
+## Wired Network Setup
 
-#### Hard Ethernet.
+Should just work by default.
+
+## Installing
 
 Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
 
@@ -111,6 +114,7 @@ sudo systemctl restart snap.docker.dockerd
 
 log out, and log in again.
 
+FIXME: update-ca-certificates and a read write /etc/ssl/certs
 Build and run our squid container on proxybox. Follow the directions in "README-Wire.md" in the [docker-squid4](https://github.com/wireapp/docker-squid4) repo.
 
 
@@ -134,11 +138,7 @@ curl -v --cacert local_mitm.pem https://wire.com/en/
 
 ### setting up localbox
 
-FIXME: port 123, NTP.
-FIXME: port 22, SSH.
-
-FIXME: expand DHCP range and reduce subnet in dhcpd.conf of proxybox.
-FIXME: update-ca-certificates and a read write /etc/ssl/certs
+FIXME: port 123 outgoing, NTP.
 
 
 
@@ -170,16 +170,19 @@ sudo update-ca-certificates
 
 run 'make all', using the make file in this directory to install helm, and kubectl.
 
-
-follow the directions in proxybox-kvm/README.md. make sure to skip the networking for local networking.
-
 pip3 install ansible
 pip3 install kubespray
 pip3 install jinja2
 
+### Setting up a Virtual Machine
+follow the directions in proxybox-kvm/README.md. make sure to skip the networking for local networking.
+
 To create more KVM configuration directories, just create a new directory, copy *.sh out of the proxybox-kvm folder, and configure startup.sh, and the two tap*-vars.sh files. don't forget to create a disk image.
 
 Create three nodes, attached to the physical interface you are running squid on.
+
+
+### Installing Kubernetes on the VMs with kubespray:
 
 https://linoxide.com/how-tos/ssh-login-with-public-key/
 Create an SSH key, and 
@@ -191,6 +194,12 @@ Install it on all of the kubenodes, so that you can SSH into them without a pass
 ```
 ssh-copy-id -i .ssh/id_rsa.pub demo@<IP>
 ```
+
+On each of the nodes, in order for ansible to sudo to root without a password, at the end of the /etc/sudoers file add this line:
+```
+username     ALL=(ALL) NOPASSWD:ALL
+```
+Replace username with your account username
 
 check out the kubespray repo.
 ```sh
@@ -205,7 +214,6 @@ sudo CONFIG_FILE=inventory/mycluster/hosts.yml python3 contrib/inventory_builder
 ```
 edit inventory/mycluster/group_vars/k8s-cluster/addons.yml, and set helm_enabled to true.
 
-
 install the SSL certificate on all of the nodes.
 ```
 ssh demo@IP sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
@@ -215,13 +223,18 @@ ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local
 ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 ssh demo@ip sudo update-ca-certificaten
 ```
-FIXME: ANSIBLE THIS.
+FIXME: ANSIBLE THIS STEP.
 
-run kubespray:
+Run kubespray:
 ansible_playbook -i inventory/mycluster/hosts.yml --ssh-extra-args="-o StrictHostKeyChecking=no" --become --become-user=root cluster.yml
 
 === BELOW HERE IS DRAGONS ===
 
+Making Squid work offline:
+add 'offline_mode on' to your squid.conf
+apt-get update still doesn't work with internet offline.
+
+refresh_pattern -i \.*$ 10080 90% 43200 override-expire ignore-no-cache ignore-no-store ignore-private
 
 Consider this:
 
