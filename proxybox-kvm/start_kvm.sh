@@ -22,6 +22,9 @@ CDROM=ubuntu-18.04.2-live-server-amd64.iso
 # The disk image.
 DISK=proxybox.img
 
+# How much memory to allocate to this VM.
+MEM=2048
+
 # You should not have to modify anything below this line.
 
 #=====================================LINE================================
@@ -38,7 +41,7 @@ if [ -z "$DRIVE" ] ; then
     DRIVE=d
 fi
 
-/usr/bin/kvm -m 1024 -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $BR0 $BR1 $CURSES
+/usr/bin/kvm -m $MEM -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $BR0 $BR1 $CURSES
 
 if [ -n "$BR1" ] ; then
     $SUDO ip tuntap del dev $BR1TAP mode tap

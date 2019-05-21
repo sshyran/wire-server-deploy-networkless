@@ -114,7 +114,7 @@ Yes, Continue.
 username, hostname, password, password again.
 install openssh server.
 
-once it reboots, power off the VM. either with a kill -15, or with the GUI.
+once it reboots, power off the VM. either by hitting 'alt-2' and typing quit, or with the GUI.
 
 To boot into the OS:
 ```
