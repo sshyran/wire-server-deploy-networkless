@@ -4,7 +4,7 @@ This host is to proxy all traffic during a WIRE installation, so that the exact 
 ### status
 
 experimental
-
+FIXME: more DHCP leases for the nodes.
 
 ### setting up proxybox
 Sources:
@@ -168,34 +168,59 @@ sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo update-ca-certificates
 ```
 
-=== BELOW HERE IS DRAGONS ===
-
 run 'make all', using the make file in this directory to install helm, and kubectl.
 
 
+follow the directions in proxybox-kvm/README.md. make sure to skip the networking for local networking.
 
-check out kubespray:
-```
-git clone https://github.com/kubernetes-sigs/kubespray
-```
-
-start setting up qemu:
-```
-sudo apt install qemu-kvm
-```
-
-download the 
-
+pip3 install ansible
 pip3 install kubespray
 pip3 install jinja2
-pip3 install ansible
+
+To create more KVM configuration directories, just create a new directory, copy *.sh out of the proxybox-kvm folder, and configure startup.sh, and the two tap*-vars.sh files. don't forget to create a disk image.
+
+Create three nodes, attached to the physical interface you are running squid on.
+
+https://linoxide.com/how-tos/ssh-login-with-public-key/
+Create an SSH key, and 
+```
+ssh-keygen -t rsa
+```
+
+Install it on all of the kubenodes, so that you can SSH into them without a password:
+```
+ssh-copy-id -i .ssh/id_rsa.pub demo@<IP>
+```
+
+check out the kubespray repo.
+```sh
+git clone https://github.com/kubernetes-sigs/kubespray
+cd kubespray
+```
+
+create a cluster configuration.
+```
+cp -a inventory/sample inventory/mycluster
+sudo CONFIG_FILE=inventory/mycluster/hosts.yml python3 contrib/inventory_builder/inventory.py <IPs_Of_All_Nodes>
+```
+edit inventory/mycluster/group_vars/k8s-cluster/addons.yml, and set helm_enabled to true.
 
 
+install the SSL certificate on all of the nodes.
+```
+ssh demo@IP sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
+scp /usr/local/share/ca-certificates/wire.com/local_mitm.crt demo@<IP>:/home/demo
+ssh demo@IP sudo mv /home/demo/local_mitm.crt /usr/local/share/ca-certificates/wire.com/
+ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local_mitm.crt
+ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
+ssh demo@ip sudo update-ca-certificaten
+```
+FIXME: ANSIBLE THIS.
 
-CONFIG_FILE=inventory/mycluster/hosts.yml python3 
+run kubespray:
+ansible_playbook -i inventory/mycluster/hosts.yml --ssh-extra-args="-o StrictHostKeyChecking=no" --become --become-user=root cluster.yml
 
-
-
+=== BELOW HERE IS DRAGONS ===
 
 
 Consider this:
@@ -205,7 +230,3 @@ Consider this:
 
 Then try, on localbox:
 
-```sh
-git clone https://github.com/kubernetes-sigs/kubespray
-...
-```
