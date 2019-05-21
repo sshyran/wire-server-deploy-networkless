@@ -6,15 +6,6 @@ DHCLIENT="/sbin/dhclient"
 
 . ./tap-bridge-physif-vars.sh
 
-if [ "$SHAREDIF" -eq "0" ] ; then
-    echo -n ""
-else
-    # remove the physical device from the bridge.
-    $SUDO $BRCTL delif $BRIDGE $PHYSIF
-    # shut down the physical device.
-    $SUDO $IFCONFIG $PHYSIF down
-fi
-
 $SUDO $IP link set $1 down promisc off
 
 # remove ourself from the bridge.
@@ -30,6 +21,11 @@ if [ -z "$BRIDGEDEV" ] ; then
 	if [ "$SHAREDIF" -eq "0" ] ; then
 	    # restore internet on the physical interface.
 	    $DHCLIENT -r $BRIDGE
+	else
+	    # remove the physical device from the bridge.
+	    $SUDO $BRCTL delif $BRIDGE $PHYSIF
+	    # shut down the physical device.
+	    $SUDO $IFCONFIG $PHYSIF down
 	fi
 	# we are the last one out. burn the bridge.
         $SUDO $IFCONFIG $BRIDGE down
