@@ -1,21 +1,17 @@
 ---
-# is this file needed? Where to run this from in a "real" setup?
-
+# run this from admin_vm
 - hosts: proxybox
   gather_facts: false
+  vars:
   tasks:
     - name: fetch cert from proxybox onto local machine
       fetch:
         src: docker-squid4/mk-ca-cert/certs/wire.com.crt
-        dest: /tmp/local_mitm.crt
+        dest: "/tmp/local_mitm.crt"
         flat: true
 
 - hosts: localhost
   gather_facts: false
-  tasks:
-    - shell: ls -al /tmp/local_mitm.crt
-
-- hosts: admin_vm
   vars:
     cert_dir: "/usr/local/share/ca-certificates/wire.com"
   tasks:
@@ -29,6 +25,27 @@
       copy:
         src: "/tmp/local_mitm.crt"
         dest: "{{ cert_dir }}/local_mitm.crt"
+        mode: 0644
+
+    - name: update ca certificates
+      shell: update-ca-certificates
+
+- hosts: nodes
+  vars:
+    cert_local_dir: "/usr/local/share/ca-certificates/wire.com"
+    cert_dir: "/usr/local/share/ca-certificates/wire.com"
+    cert_name: "local_mitm.crt"
+  tasks:
+    - name: create man-in-the-middle certificate directory
+      file:
+        path: "{{ cert_dir }}"
+        state: directory
+        mode: 0755
+
+    - name: copy certificate
+      copy:
+        src: "{{ cert_local_dir }}/{{ cert_name }}"
+        dest: "{{ cert_dir }}/{{ cert_name }}"
         mode: 0644
 
     - name: update ca certificates
