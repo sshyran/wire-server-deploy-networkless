@@ -46,9 +46,10 @@ $ sha256sum ubuntu-18.04.2-live-server-amd64.iso
 ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
 ```
 
-Install these packages to provide networking to the machine you will be installing wire on:
+Install these packages to provide networking from the proxybox to the machines you will be installing wire on:
 ```
-isc-dhcp-server dnsmasq
+apt update
+apt install isc-dhcp-server dnsmasq
 ```
 
 copy the [proxybox files](./proxybox) to the proxybox.
@@ -115,6 +116,7 @@ sudo systemctl restart snap.docker.dockerd
 log out, and log in again.
 
 FIXME: update-ca-certificates and a read write /etc/ssl/certs
+
 Build and run our squid container on proxybox. Follow the directions in "README-Wire.md" in the [docker-squid4](https://github.com/wireapp/docker-squid4) repo.
 
 
@@ -221,12 +223,26 @@ scp /usr/local/share/ca-certificates/wire.com/local_mitm.crt demo@<IP>:/home/dem
 ssh demo@IP sudo mv /home/demo/local_mitm.crt /usr/local/share/ca-certificates/wire.com/
 ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-ssh demo@ip sudo update-ca-certificaten
+1ssh demo@ip sudo update-ca-certificate
 ```
 FIXME: ANSIBLE THIS STEP.
 
 Run kubespray:
 ansible_playbook -i inventory/mycluster/hosts.yml --ssh-extra-args="-o StrictHostKeyChecking=no" --become --become-user=root cluster.yml
+
+log into one of the master nodes.
+copy the config from .kube in root's homedirectory to being in your user's home directory.
+
+helm init
+
+clone wire-server-deploy.
+
+add the wire helm repo
+
+helm upgrade to add the demo-databases-ephemeral.
+
+helm add the wtf repo for kubernetes-charts.storage.googleapis.com
+
 
 === BELOW HERE IS DRAGONS ===
 
