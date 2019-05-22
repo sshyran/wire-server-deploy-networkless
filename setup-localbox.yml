@@ -1,10 +1,12 @@
 ---
+# is this file needed? Where to run this from in a "real" setup?
+
 - hosts: proxybox
   gather_facts: false
   tasks:
     - name: fetch cert from proxybox onto local machine
       fetch:
-        src: /tmp/root
+        src: docker-squid4/mk-ca-cert/certs/wire.com.crt
         dest: /tmp/local_mitm.crt
         flat: true
 
@@ -22,8 +24,12 @@
         path: "{{ cert_dir }}"
         state: directory
         mode: 0755
+
     - name: copy certificate
       copy:
         src: "/tmp/local_mitm.crt"
         dest: "{{ cert_dir }}/local_mitm.crt"
         mode: 0644
+
+    - name: update ca certificates
+      shell: update-ca-certificates

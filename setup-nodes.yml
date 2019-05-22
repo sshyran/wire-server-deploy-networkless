@@ -1,0 +1,23 @@
+---
+# run this from localbox
+
+- hosts: nodes
+  vars:
+    cert_local_dir: "/tmp/"
+    cert_dir: "/usr/local/share/ca-certificates/wire.com"
+    cert_name: "local_mitm.crt"
+  tasks:
+    - name: create man-in-the-middle certificate directory
+      file:
+        path: "{{ cert_dir }}"
+        state: directory
+        mode: 0755
+
+    - name: copy certificate
+      copy:
+        src: "{{ cert_local_dir }}/{{ cert_name }}"
+        dest: "{{ cert_dir }}/{{ cert_name }}"
+        mode: 0644
+
+    - name: update ca certificates
+      shell: update-ca-certificates
