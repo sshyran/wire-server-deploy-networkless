@@ -136,7 +136,7 @@ curl -v --cacert local_mitm.pem https://wire.com/en/
 ```
 
 
-### setting up localbox
+### setting up admin_vm
 
 FIXME: port 123 outgoing, NTP.
 
@@ -151,7 +151,7 @@ $ sha256sum ubuntu-18.04.2-live-server-amd64.iso
 ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
 ```
 
-Add local ca cert to localbox:
+Add local ca cert to admin_vm:
 ```sh
 sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 ```
@@ -161,7 +161,7 @@ from proxybox:
 scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<LOCALBOXIP>:/home/<USERNAME>
 ```
 
-back on localbox:
+back on admin_vm:
 ```
 sudo cp wire.com.crt /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
@@ -237,5 +237,5 @@ Consider this:
 - https://github.com/kubernetes-sigs/kubespray#ansible
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment
 
-Then try, on localbox:
+Then try, on admin_vm:
 

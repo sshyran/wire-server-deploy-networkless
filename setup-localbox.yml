@@ -15,7 +15,7 @@
   tasks:
     - shell: ls -al /tmp/local_mitm.crt
 
-- hosts: localbox
+- hosts: admin_vm
   vars:
     cert_dir: "/usr/local/share/ca-certificates/wire.com"
   tasks:

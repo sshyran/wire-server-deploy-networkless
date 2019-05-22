@@ -1,5 +1,5 @@
 ---
-# run this from localbox
+# run this from admin_vm
 
 - hosts: nodes
   vars:
