@@ -32,3 +32,5 @@ helm: $(BIN_DIR)
 	helm repo add cos https://centerforopenscience.github.io/helm-charts/
 	helm repo remove local || true
 
+ansible:
+	ansible-playbook -i bk-test.ini setup.yml -vv
