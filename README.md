@@ -216,14 +216,10 @@ edit inventory/mycluster/group_vars/k8s-cluster/addons.yml, and set helm_enabled
 
 install the SSL certificate on all of the nodes.
 ```
-ssh demo@IP sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
-scp /usr/local/share/ca-certificates/wire.com/local_mitm.crt demo@<IP>:/home/demo
-ssh demo@IP sudo mv /home/demo/local_mitm.crt /usr/local/share/ca-certificates/wire.com/
-ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-ssh demo@ip sudo update-ca-certificaten
+# assumes the cert at /tmp/local_mitm.crt - edit setup-nodes.yml if that's not the case
+# assumes an inventory group called 'nodes' containing all the IPs/names of the nodes that you wish to install the mitm certificate on.
+ansible-playbook -i <path-to-inventory-file> setup-nodes.yml
 ```
-FIXME: ANSIBLE THIS STEP.
 
 Run kubespray:
 ansible_playbook -i inventory/mycluster/hosts.yml --ssh-extra-args="-o StrictHostKeyChecking=no" --become --become-user=root cluster.yml
