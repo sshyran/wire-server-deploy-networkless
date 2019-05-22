@@ -216,7 +216,7 @@ edit inventory/mycluster/group_vars/k8s-cluster/addons.yml, and set helm_enabled
 
 install the SSL certificate on all of the nodes.
 ```
-# assumes the cert at /tmp/local_mitm.crt - edit setup-nodes.yml if that's not the case
+# assumes the cert at /usr/local/share/ca-certificates/wire.com - edit setup-nodes.yml if that's not the case
 # assumes an inventory group called 'nodes' containing all the IPs/names of the nodes that you wish to install the mitm certificate on.
 ansible-playbook -i <path-to-inventory-file> setup-nodes.yml
 ```

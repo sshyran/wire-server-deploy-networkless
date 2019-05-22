@@ -3,7 +3,7 @@
 
 - hosts: nodes
   vars:
-    cert_local_dir: "/tmp/"
+    cert_local_dir: "/usr/local/share/ca-certificates/wire.com"
     cert_dir: "/usr/local/share/ca-certificates/wire.com"
     cert_name: "local_mitm.crt"
   tasks:
