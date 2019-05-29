@@ -1,9 +1,9 @@
 This repo contains tools for using the [docker-squid4](https://github.com/wireapp/docker-squid4) docker image to set up a completely transparent proxy host.
 This host is to proxy all traffic during a WIRE installation, so that the exact same installation can be performed from cache, without internet access.
 
-# status
+# Status
 
-experimental
+Experimental
 
 # Inspiration
 
@@ -13,27 +13,6 @@ Sources:
 - https://github.com/fgrehm/squid3-ssl-docker
 - https://github.com/wireapp/docker-squid4
 - http://roberts.bplaced.net/index.php/linux-guides/centos-6-guides/proxy-server/squid-transparent-proxy-http-https
-
-
-## Wireless Networking
-Install a few extra packages if you are using wireless networking:
-
-```sh
-apt-get install linux-wlan-ng rfkill wpasupplicant pump resolvconf
-```
-create /etc/wpa_supplicant.conf with your wifi settings
-
-```sh
-systemctl disable systemd-resolved
-systemctl stop systemd-resolved
-netplan generate && netplan apply
-/root/sbin/wlan start
-/root/sbin/ethnet start
-/root/sbin/iptables
-```
-## Wired Network Setup
-
-Should just work by default.
 
 ## Installing
 
@@ -46,13 +25,50 @@ $ sha256sum ubuntu-18.04.2-live-server-amd64.iso
 ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
 ```
 
-Install these packages to provide networking from the proxybox to the machines you will be installing wire on:
+### Networking
+#### Wireless Networking + USB dongle
+* Install a few extra packages if you are using wireless networking:
+
+```sh
+apt-get install linux-wlan-ng rfkill wpasupplicant pump resolvconf
+```
+
+* Create /etc/wpa_supplicant.conf with your wifi settings.
+
+* Disable systemd-resolved, so that you can manually manipulate resolv.conf.
+```sh
+systemctl disable systemd-resolved
+systemctl stop systemd-resolved
+netplan generate && netplan apply
+```
+
+* Copy the wlan and ethernet script from this repo.
+```
+git clone https://github.com/wireapp/wire-server-deploy-networkless.git
+cd wire-server-deploy-networkless/proxybox
+mkdir /root/sbin
+cp root/sbin/wlan root/sbin/ethnet /root/sbin
+```
+
+* start wireless, and bring up the USB dongle.
+```
+/root/sbin/wlan start
+/root/sbin/ethnet start
+```
+
+#### Wired Network Setup
+
+Should just work by default.
+
+### Installing and Configuring Services
+
+* Install these packages to provide networking (DNS and DHCP) from the proxybox to the machines you will be installing wire on:
 ```
 apt update
 apt install isc-dhcp-server dnsmasq
 ```
 
-copy the [proxybox files](./proxybox) to the proxybox.
+* Copy the [proxybox files](./proxybox) to the proxybox. dhcpd.conf for providing DHCP, and iptables for forwarding traffic to squid/haproxy.
 ```
 git clone https://github.com/wireapp/wire-server-deploy-networkless.git
 cd wire-server-deploy-networkless/proxybox
@@ -61,18 +77,18 @@ sudo mkdir /root/sbin
 sudo cp root/sbin/iptables /root/sbin/
 ```
 
-edit /root/sbin/iptables, and ensure the physical interface you want to serve content from is labeled correctly.
+* Edit /root/sbin/iptables, and ensure the physical interface you want to serve content from is labeled correctly.
 
-remove the lxd configuration for dnsmasq:
+Remove the lxd configuration for dnsmasq:
 ```
 rm /etc/dnsmasq.d/lxd
 ```
 
-edit /etc/dnsmasq.conf. uncomment 'no-resolv' 'bind-interfaces' and 'log-queries', specify that we should use 'server=8.8.8.8' to forward dns to, and specify the interface we are listening to on the 'interfaces=' line.
+Edit /etc/dnsmasq.conf. uncomment 'no-resolv' 'bind-interfaces' and 'log-queries', specify that we should use 'server=8.8.8.8' to forward dns to, and specify the interface we are listening to on the 'interfaces=' line.
 
-add the interface we are listening on to /etc/default/isc-dhcp-server, on the 'INTERFACESv4=' line.
+* Add the interface we are listening on to /etc/default/isc-dhcp-server, on the 'INTERFACESv4=' line.
 
-edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be listening on to use 10.0.0.1. for example:
+* Edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example:
 
 ```
         ens4:
@@ -80,15 +96,16 @@ edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be l
 	      -  10.0.0.1/24
 ```
 
-restart networking, isc-dhcp-server, and dnsmasq.
+* Restart networking, isc-dhcp-server, and dnsmasq:
 ```
 sudo netplan apply
 sudo service isc-dhcp-server restart
 sudo service dnsmasq restart
 ```
 
-Now you should be able to connect any laptop to proxybox via ethernet
-and get connectivity to 10.0.0.1, but not beyond:
+### Testing services
+
+Now you should be able to connect any laptop to proxybox via ethernet and get IP connectivity to 10.0.0.1, and DNS resolution, but not beyond:
 
 ```sh
 $ ping 10.0.0.1
@@ -102,23 +119,11 @@ PING denic.de (81.91.170.12) 56(84) bytes of data.
 [nothing ...]
 ```
 
-Note that we get an IP address from dnsmasq, but not internet,
-since we have not set up the transparent proxy yet.
+While DNS is working and IPs resolve, we do not have internet, since we have not set up the transparent proxy yet.
 
-set up docker to be built as your user. taken from https://superuser.com/questions/835696/how-solve-permission-problems-for-docker-in-ubuntu
+### Build and/or install squid
 
-```
-sudo groupadd docker
-sudo gpasswd -a <YOUR_USERNAME_HERE> docker
-sudo systemctl restart snap.docker.dockerd
-```
-
-log out, and log in again.
-
-FIXME: update-ca-certificates and a read write /etc/ssl/certs
-
-Build and run our squid container on proxybox. Follow the directions in "README-Wire.md" in the [docker-squid4](https://github.com/wireapp/docker-squid4) repo.
-
+Install and run our squid container on proxybox. Follow the directions in "README-Wire.md" in the [docker-squid4](https://github.com/wireapp/docker-squid4) repo.
 
 ### Test it!
 
@@ -137,11 +142,9 @@ curl -v http://wire.com/en/
 curl -v --cacert local_mitm.pem https://wire.com/en/
 ```
 
+### setting up admin-pc
 
-### setting up localbox
-
-FIXME: port 123 outgoing, NTP.
-
+FIXME: exclude port 123 outgoing, NTP.
 
 
 Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
@@ -153,17 +156,17 @@ $ sha256sum ubuntu-18.04.2-live-server-amd64.iso
 ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
 ```
 
-Add local ca cert to localbox:
+Add local ca cert to admin-pc:
 ```sh
 sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 ```
 
 from proxybox:
 ```sh
-scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<LOCALBOXIP>:/home/<USERNAME>
+scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<ADMIN-PCIP>:/home/<USERNAME>
 ```
 
-back on localbox:
+back on admin-pc:
 ```
 sudo cp wire.com.crt /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
@@ -257,5 +260,5 @@ Consider this:
 - https://github.com/kubernetes-sigs/kubespray#ansible
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment
 
-Then try, on localbox:
+Then try, on admin-pc:
 
