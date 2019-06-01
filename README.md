@@ -149,12 +149,7 @@ FIXME: exclude port 123 outgoing, NTP.
 
 Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
 
-Here is the checksum again if you want to trust this repo instead of the ubuntu page:
-
-```sh
-$ sha256sum ubuntu-18.04.2-live-server-amd64.iso
-ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
-```
+If you would like to check the checksum, please get it from the top of this file.
 
 Add local ca cert to admin-pc:
 ```sh
@@ -163,7 +158,7 @@ sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 
 from proxybox:
 ```sh
-scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<ADMIN-PCIP>:/home/<USERNAME>
+scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<ADMIN-PC-IP>:/home/<USERNAME>
 ```
 
 back on admin-pc:
@@ -197,16 +192,19 @@ ssh-keygen -t rsa
 
 Install it on all of the kubenodes, so that you can SSH into them without a password:
 ```
-ssh-copy-id -i .ssh/id_rsa.pub demo@<IP>
+ssh-copy-id -i .ssh/id_rsa.pub <ANSIBLE_LOGIN_USERNAME>@<IP>
 ```
+Replace ANSIBLE_LOGIN_USERNAME with the username of the account you set up when you installed the machine.
+
+
 
 On each of the nodes, in order for ansible to sudo to root without a password, at the end of the /etc/sudoers file add this line:
 ```
-username     ALL=(ALL) NOPASSWD:ALL
+<ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
-Replace username with your account username
+Replace ANSIBLE_LOGIN_USERNAME with the username of the account you set up when you installed the machine.
 
-check out the kubespray repo.
+* Check out the kubespray repo.
 ```sh
 git clone https://github.com/kubernetes-sigs/kubespray
 cd kubespray
