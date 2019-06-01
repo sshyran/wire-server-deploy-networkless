@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source HOSTBRIDGE-vars.sh
+. ./HOSTBRIDGE-vars.sh
 
 $SUDO $IP link set $1 down promisc off
 #$SUDO $IFCONFIG $1 0.0.0.0 promisc down

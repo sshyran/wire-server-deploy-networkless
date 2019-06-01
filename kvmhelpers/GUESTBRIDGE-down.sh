@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source GUESTBRIDGE-vars.sh
+. ./GUESTBRIDGE-vars.sh
 
 $SUDO $IP link set $1 down promisc off
 #$SUDO $IFCONFIG $1 0.0.0.0 promisc down

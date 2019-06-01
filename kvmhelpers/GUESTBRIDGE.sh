@@ -4,7 +4,7 @@ USER=`whoami`
 
 {
 
-source GUESTBRIDGE-vars.sh
+. ./GUESTBRIDGE-vars.sh
 
 BRIDGEDEV=`$BRCTL show|grep -E ^"$BRIDGE"`
 
