@@ -32,20 +32,20 @@ DISK=drive-c.img
 #=====================================LINE================================
 
 # Load an optional configuration file.
-if [ -n ${config_file+x} ]; then
+if [ -n "${config_file+x}" ]; then
     echo "loading config file: ${config_file}"
     source ${config_file}
 fi
 
 # Create parameters from the CPUS setting above
-if [ -n ${CPUS-x} ]; then
+if [ -n "${CPUS+x}" ]; then
     echo "Restricting to $CPUS processors."
     PROCESSORS="-smp cores=$CPUS"
 fi
 
 # select an interface.
-if [ -n ${DISPLAY-x} ]; then
-    if [ -n ${CURSES-x} ]; then
+if [ -n "${DISPLAY+x}" ]; then
+    if [ -n "${CURSES+x}" ]; then
 	echo "Disabling graphical display."
 	unset $DISPLAY
     fi
