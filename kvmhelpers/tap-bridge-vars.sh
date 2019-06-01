@@ -3,7 +3,6 @@ BRIDGE=br0
 BRIDGEIP=172.16.0.1
 BRIDGEBROADCAST=172.16.0.255
 
-MGMT_DIR=/var/local/createvm
 # 0 for true.
 USEDHCP=0
 USEDNS=0
