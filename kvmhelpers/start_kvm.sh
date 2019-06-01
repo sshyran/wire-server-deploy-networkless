@@ -73,7 +73,7 @@ else
 fi
 
 # Actually launch qemu-kvm.
-echo /usr/bin/kvm -m $MEM -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $NETWORK $PROCESSORS $CURSES
+/usr/bin/kvm -m $MEM -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $NETWORK $PROCESSORS $CURSES
 
 # VM has shut down, remove all of the taps.
 for each in $ASSIGNED_TAPS; do
