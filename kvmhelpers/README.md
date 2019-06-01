@@ -2,7 +2,7 @@
 
 ## Scope of this document:
 
-This document and the files contained in this directory contain instructions and code for setting up KVM virtual hosts and virtual networking, for the testing of various configurations of WIRE.
+This document and the files contained in this directory contain instructions and code for setting up KVM virtual hosts and virtual networking, for the testing of various configurations of WIRE and it's dependencies.
 
 ## Assumptions:
 
@@ -18,7 +18,7 @@ First, make sure KVM is available and ready to use.
   * If method 2 does not tell you "KVM acceleration can be used", try method 3. If method 3 works, but method 2 does not, you need to enable virtualization in your BIOS.
     * For loose directions on enabling virtualization in your BIOS, follow https://www.bleepingcomputer.com/tutorials/how-to-enable-cpu-virtualization-in-your-computer-bios/ .
 
-### Install qemu:
+### Install QEMU:
 
 QEMU is the application that lets us take advantage of KVM extensions.
 
@@ -102,9 +102,9 @@ qemu-img create ansnode3/drive-c.img 50G
 
 ### Copying helper scripts:
 
-The repository this file is in (https://github.com/wireapp/wire-server-deploy-networkless.git) contains helper scripts, for managing QEMU and it's network interfaces.
+The repository this file is in (https://github.com/wireapp/wire-server-deploy-networkless.git) the directory that contains this README.md. along side it are helper scripts, for managing QEMU and it's network interfaces.
 
-The directory this file is in has the helper scripts. they end in '.sh'. Copy them into the directories you are using to contain your virtual machines. for instance, with this repo checked out to wire-app/wire-server-deploy-networkless:
+The helper scripts consist of all of the files in this directory ending in '.sh'. Copy them into the directories you are using to contain your virtual machines. for instance, with this repo checked out to wire-app/wire-server-deploy-networkless:
 
 ```
 cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/proxybox
@@ -117,47 +117,61 @@ cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode5
 cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode6
 ```
 
-
-
 #### Choosing an interface:
-If the system you are using has a graphical interface, and you elected to set up QEMU to be used by a non-priviledged user, it will use the graphical interface by default. If one of these conditions is not true, you must use the ncurses (text) interface.
+If the system you are using has a graphical interface, and you elected to set up QEMU to be used by a non-priviledged user, it will use the graphical interface by default. If one of these conditions is not true, Then this script will use the ncurses (text) interface. Should it chose wrong, there are settings in start_kvm.sh you can change.
 
-* To use the text interface edit 'start.sh', and uncomment the line with CURSES on it.
+#### Choosing networking, Ram, CPUs, and boot media:
 
-# Setting up Networking
+If you edit the 'start_kvm.sh' script that you copied into the place you're storing your VMs, there are self-explaining configuration options at the top of the file. so let me explain them. :)
 
+* The first user-editable option is MEM, or how much ram you want to give your VM, in megabytes.
+* The second option is CPUS, which sets how many CPUs you can see from inside of the VM. Note that this is not a hard reservation, so you can have two CPUs for two VMs, even if you only have two real CPUs.
+* The third and forth options are what files to use as the virtual cd-rom and virtual hard disks.
+
+The final two options we're going to examine configure the networking. each option is in a "eth<number>=<STRATEGY>" form. There are currently two strategies available:
+  * HOSTBRIDGE -- This network interface is for the VM to talk over ethernet to the machine the VM is running on.
+  * GUESTBRIDGE -- This network interface is connected to a virtual switch, which has any other VM that uses this strategy also plugged into it.
+
+following our example network plan, we're going to leave proxybox with one interface configured for HOSTBRIDGE so it has internet access, and one interface configured for GUESTBRIDGE, so the machines we are installing wire on can communicate with it. we are going to comment out the HOSTBRIDGE interface on all other VMs, so that they only speak to the proxybox, via the GUESTBRIDGE.
+
+
+#### Configuring the host to provide networking:
+
+* Install bridge-utils, for GUESTBRIDGE and HOSTBRIDGE to work.
 ```
 sudo apt install bridge-utils
 ```
 
-Check out this repository on your target machine.
+##### LocalHost -> QEMU
+== Skip this entire step if we are not providing internet and IP connectivity to any VM, AKA if you are not using LOCALBRIDGE ==
 
+For LOCALBRIDGE, we are going to install and configure an ip-masquerading firewall, a DHCP server, and a DNS server, so that VMs using the LOCALBRIDGE strategy can access the internet, through services on the host machine.
 
-## LocalHost -> QEMU
-== Skip this entire step if we are not providing masquerading to the VM ==
-
+* Install dependencies. the UFW firewall, ISC's DHCP server, and the Bind nameserver:
 ```
-apt install uml-utilities ufw isc-dhcp-server bind9
+apt install ufw isc-dhcp-server bind9
 ```
 
-change "DEFAULT_FORWARD_POLICY=DROP" to 'DEFAULT_FORWARD_POLICY="ACCEPT"' in /etc/default/ufw
+###### IP Masquerading
 
-disable ipv6, and allow ipv4 forwarding in /etc/ufw/sysctl.conf:
+We're going to use the UFW product to provide internet to any machine using the LOCALBRIDGE strategy.
 
+* Change "DEFAULT_FORWARD_POLICY=DROP" to 'DEFAULT_FORWARD_POLICY="ACCEPT"' in /etc/default/ufw
+* Disable ipv6, and allow ipv4 forwarding in /etc/ufw/sysctl.conf:
 ```
 net.ipv4.ip_forward=1
 #net/ipv6/conf/default/forwarding=1
 #net/ipv6/conf/all/forwarding=1
 ```
 
-Change the 'enp0s25' to match the interface you're using, then add the following right after the first comment block in /etc/ufw/before.rules:
+* Change the 'enp0s25' to match the interface you're using, then add the following right after the first comment block in /etc/ufw/before.rules:
 ```
 
 # NAT table rules
 *nat
 :POSTROUTING ACCEPT [0:0]
 
-# Masqeurade traffic from our qemu network of 172.16.0/24 to enp0s25 - Change to match your out-interface, and your desired network.
+# Masqeurade traffic from our qemu network of 172.16.0/24 to enp0s25. enp0s25 is probably not the name of your network card. check, and adjust.
 -A POSTROUTING -s 172.16.0/24 -o enp0s25 -j MASQUERADE
 
 # don't delete the 'COMMIT' line or these nat table rules won't
@@ -165,12 +179,22 @@ Change the 'enp0s25' to match the interface you're using, then add the following
 COMMIT
 ```
 
+* make sure we can connect on port 22 tcp so we can ssh in.
+```
+ufw allow 22/tcp
+```
+
+* Restart the firewall to enable this.
 sudo ufw disable && sudo ufw enable
 
-edit /etc/dhcp/dhcpd.conf
-comment out the line at the top reading: 'option domain-name "example.org";'
-comment out the line at the top reading: 'option domain-name-servers ns1.example.org, ns2.example.org;'
-add the following to the end of the file:
+###### DHCP services:
+
+In order for VMs plugged into the LOCALBRIDGE to get an address, they will use DHCP. We're going to configure ISC's DHCPD to provide those addresses.
+
+* edit /etc/dhcp/dhcpd.conf
+* comment out the line at the top reading: 'option domain-name "example.org";'
+* comment out the line near the top reading: 'option domain-name-servers ns1.example.org, ns2.example.org;'
+* add the following to the end of the file:
 ```
 # provide DHCP to our hosted kvm network.
 subnet 172.16.0.0 netmask 255.255.255.0 {
@@ -180,46 +204,20 @@ subnet 172.16.0.0 netmask 255.255.255.0 {
 }
 ```    
 
-add br0 to the list of ipv4 interfaces dhcpd can listen to in /etc/default/isc-dhcp-server
+* Add br0 to the list of ipv4 interfaces dhcpd can listen to in /etc/default/isc-dhcp-server
+
+###### Name Services:
+DNS services will be handled by BIND, which is configured properly by default. The only thing we need to do is poke a hole in the firewall, so that the LOCALBRIDGE can access it.
+
 
 add port 53 udp to the list of ports to allow remote connections from.
 ```
 sudo ufw allow 53/udp
 ```
 
-add port 22 tcp for ssh.
-```
-ufw allow 22/tcp
-```
+##### QEMU -> No Ethernet (on second interface)
 
 
-## QEMU -> No Ethernet (on second interface)
-edit ./startup.sh
-change thi instances of bridge to bridge2.
-
-cp ifup-tap-bridge.sh ifup-tap-bridge2.sh
-cp ifdown-tap-bridge.sh ifdown-tap-bridge2.sh
-cp tap-bridge-vars.sh tap-bridge2-vars.sh
-
-BR1="-netdev tap,id=n2,ifname=$BR1TAP,script=./ifup-tap-bridge2.sh,downscript=./ifdown-tap-bridge2.sh -device rtl8139,mac=52:54:00:55:44:33,netdev=n2"
-
-edit the two ifup and down scripts to point to the new vars.
-
-edit vars
-no usedhcp, no usedns, no hostroute.
-
-## QEMU -> No Ethernet (primary interface)
-edit ./startup.sh, comment out BR1, and ensure the tap device for BR0 and it's mac address are unique.
-edit ./tap-, ensure all three services are disabled, and that br0 is changed to br1.
-
-## QEMU -> Ethernet
-
-edit the tap-bridge-physif-vars.sh, and change the PHYSIF to point to the ethernet device you would like to use.
-If you skipped the last section, comment out the 'BR0' sections of ./start_kvm.sh.
-
-If this interface is shared with the physical host,
-
-edit the ./start_kvm.sh, and change the mac addresses.
 
 # Launch the VM, and install ubuntu.
 ./start_kvm.sh
@@ -246,8 +244,3 @@ To boot into the OS:
 ```
 DRIVE=c ./start_kvm.sh
 ```
-
-
-
-
-
