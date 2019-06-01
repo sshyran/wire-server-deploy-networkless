@@ -149,7 +149,12 @@ For LOCALBRIDGE, we are going to install and configure an ip-masquerading firewa
 
 * Install dependencies. the UFW firewall, ISC's DHCP server, and the Bind nameserver:
 ```
-apt install ufw isc-dhcp-server bind9
+sudo apt install ufw isc-dhcp-server bind9
+```
+
+* make sure we can connect on port 22 tcp so we can ssh in.
+```
+sudo ufw allow 22/tcp
 ```
 
 ###### IP Masquerading
@@ -157,14 +162,15 @@ apt install ufw isc-dhcp-server bind9
 We're going to use the UFW product to provide internet to any machine using the LOCALBRIDGE strategy.
 
 * Change "DEFAULT_FORWARD_POLICY=DROP" to 'DEFAULT_FORWARD_POLICY="ACCEPT"' in /etc/default/ufw
-* Disable ipv6, and allow ipv4 forwarding in /etc/ufw/sysctl.conf:
+
+* edit /etc/ufw/sysctl.conf to Disable ipv6, and allow ipv4 forwarding. you should only have to uncomment the first line:
 ```
 net.ipv4.ip_forward=1
 #net/ipv6/conf/default/forwarding=1
 #net/ipv6/conf/all/forwarding=1
 ```
 
-* Change the 'enp0s25' to match the interface you're using, then add the following right after the first comment block in /etc/ufw/before.rules:
+* Add the following block of firewall rules right after the first comment block in /etc/ufw/before.rules.  Make sure to change the 'enp0s25' to match the interface you're using to get to the internet:
 ```
 
 # NAT table rules
@@ -179,13 +185,10 @@ net.ipv4.ip_forward=1
 COMMIT
 ```
 
-* make sure we can connect on port 22 tcp so we can ssh in.
+* Restart the firewall to enable these changes:
 ```
-ufw allow 22/tcp
-```
-
-* Restart the firewall to enable this.
 sudo ufw disable && sudo ufw enable
+```
 
 ###### DHCP services:
 
@@ -204,23 +207,29 @@ subnet 172.16.0.0 netmask 255.255.255.0 {
 }
 ```    
 
-* Add br0 to the list of ipv4 interfaces dhcpd can listen to in /etc/default/isc-dhcp-server
+* Edit /etc/default/isc-dhcp-server, and Add br0 to the list of ipv4 interfaces dhcpd can listen to.
+```
+INTERFACESv4="br0"
+```
 
 ###### Name Services:
 DNS services will be handled by BIND, which is configured properly by default. The only thing we need to do is poke a hole in the firewall, so that the LOCALBRIDGE can access it.
 
 
-add port 53 udp to the list of ports to allow remote connections from.
+* add port 53 udp to the list of ports to allow remote connections from.
 ```
 sudo ufw allow 53/udp
 ```
 
 ##### QEMU -> No Ethernet (on second interface)
 
+Nothing needs done for this.
 
 
-# Launch the VM, and install ubuntu.
+### Launch the VM, and install ubuntu.
+```
 ./start_kvm.sh
+```
 
 Wait for timeout at "keyboard = human" if you are in graphical mode. otherwise, wait for the '640x480 graphic mode' warning to go away.
 
