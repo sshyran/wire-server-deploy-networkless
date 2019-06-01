@@ -44,7 +44,9 @@ if [ -n "${CPUS+x}" ]; then
 fi
 
 # select an interface.
-if [ -n "${DISPLAY+x}" ]; then
+if [ -z "${DISPLAY+x}" ]; then
+    CURSES="-curses"
+else
     if [ -n "${CURSES+x}" ]; then
 	echo "Disabling graphical display."
 	unset $DISPLAY
