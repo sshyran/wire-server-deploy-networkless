@@ -21,19 +21,41 @@ CDROM=../ubuntu-18.04.2-live-server-amd64.iso
 DISK=drive-c.img
 
 # Where the global configuration is at. stores global settings, like whether to use graphics or text.
-config_file="start_kvm-vars.sh"
+#config_file="start_kvm-vars.sh"
+
+# Uncomment if you want to always use the ncurses frontend, EG, you are trying to run this without a GUI.
+# Note that this script will detect the presence of GUI access, so enabling this will disable that.
+#CURSES="-curses"
+
 
 # You should not have to modify anything below this line.
-
 #=====================================LINE================================
 
-source ${config_file}
+# Load an optional configuration file.
+if [ -n ${config_file+x} ]; then
+    echo "loading config file: ${config_file}"
+    source ${config_file}
+fi
+
+# Create parameters from the CPUS setting above
+if [ -n ${CPUS-x} ]; then
+    echo "Restricting to $CPUS processors."
+    PROCESSORS="-smp cores=$CPUS"
+fi
+
+# select an interface.
+if [ -n ${DISPLAY-x} ]; then
+    if [ -n ${CURSES-x} ]; then
+	echo "Disabling graphical display."
+	unset $DISPLAY
+    fi
+fi
 
 for each in ${!eth*}; do
     TAPDEV=$(claim_tap)
     ASSIGNED_TAPS="$ASSIGNED_TAPS $TAPDEV"
     MACADDR="52:54:00:12:34:$(printf '%02g' `echo $each | sed 's/eth//'`)"
-    echo setting up tap $TAPDEV for device $each with mac address $MACADDR
+    echo Setting up tap $TAPDEV for device $each with mac address $MACADDR
     if [ "${!each}" == "HOSTBRIDGE" ]; then
 	NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=HOSTBRIDGE.sh,downscript=HOSTBRIDGE_down.sh -device rtl8139,mac=$MACADDR"
     else if [ "${!each}" == "GUESTBRIDGE" ]; then
@@ -42,15 +64,16 @@ for each in ${!eth*}; do
     fi
 done
 
-echo $NETWORK $ASSIGNED_TAPS
-
 # boot from the CDROM if the user did not specify to boot from the disk on the command line (DRIVE=c ./start_kvm.sh).
 if [ -z "$DRIVE" ] ; then
+    echo "Booting from CD. run with \"DRIVE=c $0\" in order to boot from the hard disk."
     DRIVE=d
+else
+    echo "Booting from hard disk."
 fi
 
 # Actually launch qemu-kvm.
-echo /usr/bin/kvm -m $MEM -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $NETWORK $CURSES
+echo /usr/bin/kvm -m $MEM -boot $DRIVE -drive file=$DISK,index=0,media=disk,format=raw -drive file=$CDROM,index=1,media=cdrom -rtc base=localtime $NETWORK $PROCESSORS $CURSES
 
 # VM has shut down, remove all of the taps.
 for each in $ASSIGNED_TAPS; do
