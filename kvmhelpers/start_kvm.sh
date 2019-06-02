@@ -6,6 +6,12 @@ MEM=2048
 # How many CPUs to allocate to this VM. note: you can allocate a total of more than you have, this is fine.
 CPUS=2
 
+# The CDROM image. Used for installing.
+CDROM=../ubuntu-18.04.2-live-server-amd64.iso
+
+# The disk image.
+DISK=drive-c.img
+
 # How to wire up the network cards. To add more ports, just add more eth<n> entries.
 #  HOSTBRIDGE talks to the physical machine.
 #  GUESTBRIDGE talks only to other VMs.
@@ -13,12 +19,6 @@ CPUS=2
 #  SHAREDPORT talks to other VMs and a physical port on the host, which also uses that port for internet access.
 eth0=HOSTBRIDGE
 eth1=GUESTBRIDGE
-
-# The CDROM image. Used for installing.
-CDROM=../ubuntu-18.04.2-live-server-amd64.iso
-
-# The disk image.
-DISK=drive-c.img
 
 # Where the global configuration is at. stores global settings, like whether to use graphics or text.
 #config_file="start_kvm-vars.sh"
@@ -106,9 +106,9 @@ for each in ${!eth*}; do
     MACADDR="52:54:00:12:34:$(printf '%02g' `echo $each | sed 's/eth//'`)"
     echo Setting up tap $TAPDEV for device $each with mac address $MACADDR
     if [ "${!each}" == "HOSTBRIDGE" ]; then
-	NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=HOSTBRIDGE.sh,downscript=HOSTBRIDGE_down.sh -device rtl8139,mac=$MACADDR"
+	NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=HOSTBRIDGE.sh,downscript=HOSTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
     else if [ "${!each}" == "GUESTBRIDGE" ]; then
-	     NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=GUESTBRIDGE.sh,downscript=GUESTBRIDGE_down.sh -device rtl8139,mac=$MACADDR"
+	     NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=GUESTBRIDGE.sh,downscript=GUESTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
 	 fi
     fi
 done
