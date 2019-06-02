@@ -231,25 +231,12 @@ Nothing needs done for this.
 ./start_kvm.sh
 ```
 
-Wait for timeout at "keyboard = human" if you are in graphical mode. otherwise, wait for the '640x480 graphic mode' warning to go away.
+At this point, you can install ubuntu on each of your nodes like normal.
 
-
-english
-done
-install ubuntu
-check that the ethernet has an IP.
-'Done'
-no, we do not need to set a proxy.
-use an entire disk.
-qemu_harddisk
-Done
-Yes, Continue.
-username, hostname, password, password again.
-install openssh server.
-
-once it reboots, power off the VM. either by hitting 'alt-2' and typing quit, or with the GUI.
+you will have to shut down the VM to change it to booting from the hard drive, instead of the CD. to do that, you can log into another terminal, and kill -15 the qemu process.
 
 To boot into the OS:
 ```
 DRIVE=c ./start_kvm.sh
 ```
+
