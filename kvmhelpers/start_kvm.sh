@@ -103,7 +103,7 @@ function claim_tap() {
 for each in ${!eth*}; do
     TAPDEV=$(claim_tap)
     ASSIGNED_TAPS="$ASSIGNED_TAPS $TAPDEV"
-    MACADDR="52:54:00:12:34:$(printf '%02g' `echo $each | sed 's/eth//'`)"
+    MACADDR="52:54:00:12:34:$(printf '%02g' `echo $TAPDEV | sed 's/tap//'`)"
     echo Setting up tap $TAPDEV for device $each with mac address $MACADDR
     if [ "${!each}" == "HOSTBRIDGE" ]; then
 	NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=HOSTBRIDGE.sh,downscript=HOSTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
