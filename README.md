@@ -80,26 +80,33 @@ cd wire-server-deploy-networkless/proxybox
 sudo cp etc/dhcp/dhcpd.conf /etc/dhcp/
 ```
 
-* Also copy the iptables script we're going to use to forward traffic to squid:
+* Copy the iptables script we're going to use to forward traffic to squid:
 ```
 sudo mkdir /root/sbin
 sudo cp root/sbin/iptables /root/sbin/
 ```
 
-Remove the lxd configuration for dnsmasq:
+* Edit /etc/default/isc-dhcp-server, and add the interface we are providing DHCP services on. for example, if we are using the 'ens4' ethernet port to talk to the servers we're installing wire on:
+```
+INTERFACESv4=ens4
+```
+
+* Remove the lxd configuration for dnsmasq:
 ```
 rm /etc/dnsmasq.d/lxd
 ```
 
-Edit /etc/dnsmasq.conf. uncomment 'no-resolv' 'bind-interfaces' and 'log-queries', specify that we should use 'server=8.8.8.8' to forward dns to, and specify the interface we are listening to on the 'interfaces=' line.
+* Copy the dnsmasq snippet we've prepared for providing DNS services:
+```
+sudo cp etc/dnsmasq.d/proxybox.conf /etc/dnsmasq.d/
+```
+* If you know a specific DNS server you'd rather use than google's, edit /etc/dnsmasq.d/proxybox.conf, and set it there.
 
-* Add the interface we are listening on to /etc/default/isc-dhcp-server, on the 'INTERFACESv4=' line.
 
-* Edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example:
-
+* Edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example, if we are using the ethernet interface 'ens4':
 ```
         ens4:
-	    addreses:
+	    addresses:
 	      -  10.0.0.1/24
 ```
 
@@ -112,8 +119,7 @@ sudo service dnsmasq restart
 
 ### Testing services
 
-Now you should be able to connect any laptop to proxybox via ethernet and get IP connectivity to 10.0.0.1, and DNS resolution, but not beyond:
-
+Now you should be able to connect a device into the second ethernet port on your proxybox and get a DHCP lease, IP connectivity to 10.0.0.1, and DNS resolution, but not beyond. for example, you should see:
 ```sh
 $ ping 10.0.0.1
 PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
@@ -134,16 +140,15 @@ Install and run our squid container on proxybox. Follow the directions in "READM
 
 ### Test it!
 
-Connect a laptop to the local network and try it out: with
-explicit proxy...
+Connect a laptop or a VM to the local network and try it out:
 
+* with explicit proxy...
 ```sh
 curl -v -x 10.0.0.1:3128 http://wire.com/en/
 curl -v -x 10.0.0.1:3128 --cacert local_mitm.pem https://wire.com/en/
 ```
 
-...  and with transparent proxy.
-
+* with transparent proxy.
 ```sh
 curl -v http://wire.com/en/
 curl -v --cacert local_mitm.pem https://wire.com/en/
