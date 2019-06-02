@@ -25,7 +25,7 @@ $ sha256sum ubuntu-18.04.2-live-server-amd64.iso
 ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
 ```
 
-### Networking
+### Networking (Physical hosts only)
 #### Wireless Networking + USB dongle
 * Install a few extra packages if you are using wireless networking:
 
@@ -62,22 +62,29 @@ Should just work by default.
 
 ### Installing and Configuring Services
 
-* Install these packages to provide networking (DNS and DHCP) from the proxybox to the machines you will be installing wire on:
+* First, if this is a new install, you should perform an update to ensure security patches are applied:
 ```
-apt update
-apt install isc-dhcp-server dnsmasq
+sudo apt update
+sudo apt dist-upgrade
 ```
 
-* Copy the [proxybox files](./proxybox) to the proxybox. dhcpd.conf for providing DHCP, and iptables for forwarding traffic to squid/haproxy.
+* Install isc-dhcp-server and dnsmasq to provide networking (DNS and DHCP) from the proxybox to the machines you will be installing wire on:
+```
+sudo apt install isc-dhcp-server dnsmasq
+```
+
+* Check out the wire-server-deploy-networkless repo, and copy our pre-written configuration for isc dhcpd over the default one:
 ```
 git clone https://github.com/wireapp/wire-server-deploy-networkless.git
 cd wire-server-deploy-networkless/proxybox
 sudo cp etc/dhcp/dhcpd.conf /etc/dhcp/
+```
+
+* Also copy the iptables script we're going to use to forward traffic to squid:
+```
 sudo mkdir /root/sbin
 sudo cp root/sbin/iptables /root/sbin/
 ```
-
-* Edit /root/sbin/iptables, and ensure the physical interface you want to serve content from is labeled correctly.
 
 Remove the lxd configuration for dnsmasq:
 ```
