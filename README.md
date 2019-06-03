@@ -206,7 +206,7 @@ Install it on all of the kubenodes, so that you can SSH into them without a pass
 ```
 ssh-copy-id -i .ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
 ```
-Replace ANSIBLE_LOGIN_USERNAME with the username of the account you set up when you installed the machine.
+Replace `$ANSIBLE_LOGIN_USERNAME` with the username of the account you set up when you installed the machine.
 
 
 
