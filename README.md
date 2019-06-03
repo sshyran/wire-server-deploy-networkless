@@ -214,7 +214,7 @@ On each of the nodes, in order for ansible to sudo to root without a password, a
 ```
 <ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
-Replace ANSIBLE_LOGIN_USERNAME with the username of the account you set up when you installed the machine.
+Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
 
 * Check out the kubespray repo.
 ```sh
