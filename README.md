@@ -236,7 +236,7 @@ scp /usr/local/share/ca-certificates/wire.com/local_mitm.crt demo@<IP>:/home/dem
 ssh demo@IP sudo mv /home/demo/local_mitm.crt /usr/local/share/ca-certificates/wire.com/
 ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-1ssh demo@ip sudo update-ca-certificate
+ssh demo@ip sudo update-ca-certificate
 ```
 FIXME: ANSIBLE THIS STEP.
 
