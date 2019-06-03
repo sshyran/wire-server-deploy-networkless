@@ -170,7 +170,7 @@ sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 
 from proxybox:
 ```sh
-scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<ADMIN-PC-IP>:/home/<USERNAME>
+scp docker-squid4/mk-ca-cert/certs/wire.com.crt $USERNAME@$ADMIN_PC_IP:/home/$USERNAME/
 ```
 
 back on admin-pc:
