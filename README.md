@@ -148,9 +148,13 @@ curl -v -x 10.0.0.1:3128 http://wire.com/en/
 curl -v -x 10.0.0.1:3128 --cacert local_mitm.pem https://wire.com/en/
 ```
 
-* with transparent proxy.
+* with transparent http proxy.
 ```sh
 curl -v http://wire.com/en/
+```
+
+* with transparent https proxy. note the use of the local_mitm.pem certificate:
+```
 curl -v --cacert local_mitm.pem https://wire.com/en/
 ```
 
