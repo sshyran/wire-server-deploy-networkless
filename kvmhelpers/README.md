@@ -2,7 +2,7 @@
 
 ## Scope of this document:
 
-This document and the files contained in this directory contain instructions and code for setting up KVM virtual hosts and virtual networking, for the testing of various configurations of WIRE and it's dependencies.
+This document and the files contained in this directory contain instructions and code for setting up KVM virtual hosts and virtual networking, for the testing of various configurations of WIRE and its dependencies.
 
 ## Assumptions:
 

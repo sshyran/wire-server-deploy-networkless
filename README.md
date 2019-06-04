@@ -174,7 +174,7 @@ sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 
 from proxybox:
 ```sh
-scp docker-squid4/mk-ca-cert/certs/wire.com.crt <USERNAME>@<ADMIN-PC-IP>:/home/<USERNAME>
+scp docker-squid4/mk-ca-cert/certs/wire.com.crt $USERNAME@$ADMIN_PC_IP:/home/$USERNAME/
 ```
 
 back on admin-pc:
@@ -208,9 +208,9 @@ ssh-keygen -t rsa
 
 Install it on all of the kubenodes, so that you can SSH into them without a password:
 ```
-ssh-copy-id -i .ssh/id_rsa.pub <ANSIBLE_LOGIN_USERNAME>@<IP>
+ssh-copy-id -i .ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
 ```
-Replace ANSIBLE_LOGIN_USERNAME with the username of the account you set up when you installed the machine.
+Replace `$ANSIBLE_LOGIN_USERNAME` with the username of the account you set up when you installed the machine.
 
 
 
@@ -218,7 +218,7 @@ On each of the nodes, in order for ansible to sudo to root without a password, a
 ```
 <ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
-Replace ANSIBLE_LOGIN_USERNAME with the username of the account you set up when you installed the machine.
+Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
 
 * Check out the kubespray repo.
 ```sh
@@ -240,7 +240,7 @@ scp /usr/local/share/ca-certificates/wire.com/local_mitm.crt demo@<IP>:/home/dem
 ssh demo@IP sudo mv /home/demo/local_mitm.crt /usr/local/share/ca-certificates/wire.com/
 ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-1ssh demo@ip sudo update-ca-certificate
+ssh demo@ip sudo update-ca-certificate
 ```
 FIXME: ANSIBLE THIS STEP.
 
