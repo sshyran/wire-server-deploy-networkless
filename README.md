@@ -207,7 +207,7 @@ sudo apt update
 sudo apt dist-upgrade
 ```
 
-### Installing Kubernetes with kubespray:
+### Preparing to install Kubernetes:
 
 (from https://linoxide.com/how-tos/ssh-login-with-public-key/)
 * on 'admin', create an SSH key. 
@@ -217,47 +217,48 @@ ssh-keygen -t rsa
 
 * Install it on each of the kubenodes, so that you can SSH into them without a password:
 ```
-ssh-copy-id -i .ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
+ssh-copy-id -i ~/.ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
 ```
 Replace `$ANSIBLE_LOGIN_USERNAME` with the username of the account you set up when you installed the machine.
 
-* On each of the nodes, in order for ansible to sudo to root without a password, at the end of the /etc/sudoers file add this line:
+Ansible needs permission to become the root user, so that it can perform administratine tasks.
+* As root on each of the nodes, add the following line at the end of the /etc/sudoers file:
 ```
 <ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
 Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
 
-* Check out the kubespray repo.
-```sh
-git clone https://github.com/kubernetes-sigs/kubespray
-cd kubespray
+It is important that the IPs of machines do not change.
+
+* Get the IPs of all nodes.
+```
+cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u
 ```
 
-* Create a cluster configuration.
+* set the IPs of the nodes in /etc/dhcp/dhcpd.conf, so that ansible doesn't break:
 ```
-cp -a inventory/sample inventory/mycluster
-sudo CONFIG_FILE=inventory/mycluster/hosts.yml python3 contrib/inventory_builder/inventory.py <IPs_Of_All_Nodes>
+sudo bash -c 'cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u | sed "s/\(.*\) \(.*\)/host \2\n\toption dhcp-client-identifier \"\2\"\n\tfixed-address \1\n}\n\n/" >> /etc/dhcp/dhcpd.conf'
 ```
-
-* edit inventory/mycluster/group_vars/k8s-cluster/addons.yml, and set helm_enabled to true.
-
-install the SSL certificate on all of the nodes.
+This should generate entries like the following:
 ```
-# assumes the cert at /usr/local/share/ca-certificates/wire.com - edit setup-nodes.yml if that's not the case
-# assumes an inventory group called 'nodes' containing all the IPs/names of the nodes that you wish to install the mitm certificate on.
-cd admin_vm
-ansible-playbook -i <path-to-inventory-file> setup-mitm-cert.yml
+host <hostname> {
+     option dhcp-client-identifier "<hostname>";
+     fixed-address <address>;
+}
 ```
 
-Run kubespray:
-ansible_playbook -i inventory/mycluster/hosts.yml --ssh-extra-args="-o StrictHostKeyChecking=no" --become --become-user=root cluster.yml
+* Restart isc-dhcp-server for the previous to go into effect.
 
+From here, follow wire-server-deploy/ansible/README.md , with the following exception:
 
+Once you get to the 'ansible pre-kubernetes' step, run the setup-mitm-cert.yml script, to copy our certificate to all of the nodes:
+```
+wire@admin:~/wire-server-deploy/ansible$ poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
+```
 
 === BELOW HERE IS DRAGONS ===
 
-log into one of the master nodes.
-copy the config from .kube in root's homedirectory to being in your user's home directory.
+
 
 helm init
 
