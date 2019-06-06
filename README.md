@@ -14,6 +14,7 @@ Sources:
 - https://github.com/wireapp/docker-squid4
 - http://roberts.bplaced.net/index.php/linux-guides/centos-6-guides/proxy-server/squid-transparent-proxy-http-https
 
+
 ## Installing
 
 Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
@@ -55,6 +56,7 @@ cp root/sbin/wlan root/sbin/ethnet /root/sbin
 /root/sbin/wlan start
 /root/sbin/ethnet start
 ```
+<<<<<<< HEAD
 
 #### Wired Network Setup
 
@@ -119,7 +121,7 @@ sudo service dnsmasq restart
 
 ### Testing services
 
-Now you should be able to connect a device into the second ethernet port on your proxybox and get a DHCP lease, IP connectivity to 10.0.0.1, and DNS resolution, but not beyond. for example, you should see:
+* Now you should be able to connect a device into the second ethernet port on your proxybox and get a DHCP lease, IP connectivity to 10.0.0.1, and DNS resolution, but not beyond. for example, you should see:
 ```sh
 $ ping 10.0.0.1
 PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
@@ -153,99 +155,106 @@ curl -v -x 10.0.0.1:3128 --cacert local_mitm.pem https://wire.com/en/
 curl -v http://wire.com/en/
 ```
 
-* with transparent https proxy. note the use of the local_mitm.pem certificate:
-```
-curl -v --cacert local_mitm.pem https://wire.com/en/
-```
+### setting up an admin node:
 
-### setting up admin-pc
+The admin node is the machine we're going to perform administrative tasks with. This includes both setting up our kubernetes cluster, and setting up non-kubernetes services via ansible.
 
-FIXME: exclude port 123 outgoing, NTP.
+* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
+  * If you would like to check the checksum, please get it from the top of this file.
 
-
-Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
-
-If you would like to check the checksum, please get it from the top of this file.
-
-Add local ca cert to admin-pc:
+* Add local ca cert to admin:
 ```sh
 sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 ```
-
-from proxybox:
+  * from proxybox, in the location you checked out the docker-squid4 repo:
 ```sh
 scp docker-squid4/mk-ca-cert/certs/wire.com.crt $USERNAME@$ADMIN_PC_IP:/home/$USERNAME/
 ```
-
-back on admin-pc:
+  * back on admin_vm:
 ```
 sudo cp wire.com.crt /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo update-ca-certificates
 ```
 
-run 'make all', using the make file in this directory to install helm, and kubectl.
+* Check out this repository, and run 'make all', to install helm, and kubectl.
+```
+sudo apt install make
+mkdir -p ~/.local/bin
+export PATH=$PATH:~/.local/bin
+git clone https://github.com/wireapp/wire-server-deploy-networkless.git
+cd wire-server-deploy-networkless
+make
+```
 
+```
+apt install pip3
 pip3 install ansible
 pip3 install kubespray
 pip3 install jinja2
-
-### Setting up a Virtual Machine
-follow the directions in proxybox-kvm/README.md. make sure to skip the networking for local networking.
-
-To create more KVM configuration directories, just create a new directory, copy *.sh out of the proxybox-kvm folder, and configure startup.sh, and the two tap*-vars.sh files. don't forget to create a disk image.
-
-Create three nodes, attached to the physical interface you are running squid on.
+```
 
 
-### Installing Kubernetes on the VMs with kubespray:
+### setting up the kubernetes nodes:
+Create three more virtual/physical nodes, attached to the physical interface you are running squid on.
 
-https://linoxide.com/how-tos/ssh-login-with-public-key/
-Create an SSH key, and 
+* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
+  * If you would like to check the checksum, please get it from the top of this file.
+
+* After installing, make sure you perform security updates:
+```
+sudo apt update
+sudo apt dist-upgrade
+```
+
+### Preparing to install Kubernetes:
+
+(from https://linoxide.com/how-tos/ssh-login-with-public-key/)
+* on 'admin', create an SSH key. 
 ```
 ssh-keygen -t rsa
 ```
 
-Install it on all of the kubenodes, so that you can SSH into them without a password:
+* Install it on each of the kubenodes, so that you can SSH into them without a password:
 ```
-ssh-copy-id -i .ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
+ssh-copy-id -i ~/.ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
 ```
 Replace `$ANSIBLE_LOGIN_USERNAME` with the username of the account you set up when you installed the machine.
 
-
-
-On each of the nodes, in order for ansible to sudo to root without a password, at the end of the /etc/sudoers file add this line:
+Ansible needs permission to become the root user, so that it can perform administratine tasks.
+* As root on each of the nodes, add the following line at the end of the /etc/sudoers file:
 ```
 <ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
 Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
 
-* Check out the kubespray repo.
-```sh
-git clone https://github.com/kubernetes-sigs/kubespray
-cd kubespray
+It is important that the IPs of machines do not change.
+
+* Get the IPs of all nodes.
+```
+cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u
 ```
 
-create a cluster configuration.
+* set the IPs of the nodes in /etc/dhcp/dhcpd.conf, so that ansible doesn't break:
 ```
-cp -a inventory/sample inventory/mycluster
-sudo CONFIG_FILE=inventory/mycluster/hosts.yml python3 contrib/inventory_builder/inventory.py <IPs_Of_All_Nodes>
+sudo bash -c 'cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u | sed "s/\(.*\) \(.*\)/host \2\n\toption dhcp-client-identifier \"\2\"\n\tfixed-address \1\n}\n\n/" >> /etc/dhcp/dhcpd.conf'
 ```
-edit inventory/mycluster/group_vars/k8s-cluster/addons.yml, and set helm_enabled to true.
+This should generate entries like the following:
+```
+host <hostname> {
+     option dhcp-client-identifier "<hostname>";
+     fixed-address <address>;
+}
+```
 
-install the SSL certificate on all of the nodes.
-```
-ssh demo@IP sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
-scp /usr/local/share/ca-certificates/wire.com/local_mitm.crt demo@<IP>:/home/demo
-ssh demo@IP sudo mv /home/demo/local_mitm.crt /usr/local/share/ca-certificates/wire.com/
-ssh demo@IP sudo chown root.root /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-ssh demo@IP sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
-ssh demo@ip sudo update-ca-certificate
-```
-FIXME: ANSIBLE THIS STEP.
+* Restart isc-dhcp-server for the previous to go into effect.
 
-Run kubespray:
-ansible_playbook -i inventory/mycluster/hosts.yml --ssh-extra-args="-o StrictHostKeyChecking=no" --become --become-user=root cluster.yml
+From here, follow wire-server-deploy/ansible/README.md , with the following exception:
+
+Once you get to the 'ansible pre-kubernetes' step, run the setup-mitm-cert.yml script, to copy our certificate to all of the nodes:
+```
+wire@admin:~/wire-server-deploy/ansible$ poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
+```
 
 log into one of the master nodes.
 copy the config from .kube in root's homedirectory to being in your user's home directory.
@@ -263,6 +272,19 @@ helm add the wtf repo for kubernetes-charts.storage.googleapis.com
 
 === BELOW HERE IS DRAGONS ===
 
+
+
+helm init
+
+clone wire-server-deploy.
+
+add the wire helm repo
+
+helm upgrade to add the demo-databases-ephemeral.
+
+helm add the wtf repo for kubernetes-charts.storage.googleapis.com
+
+
 Making Squid work offline:
 add 'offline_mode on' to your squid.conf
 apt-get update still doesn't work with internet offline.
@@ -275,4 +297,5 @@ Consider this:
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment
 
 Then try, on admin-pc:
+
 
