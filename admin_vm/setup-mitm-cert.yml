@@ -1,6 +1,6 @@
 ---
 
-- hosts: nodes
+- hosts: all
   vars:
     cert_local_dir: "/usr/local/share/ca-certificates/wire.com"
     cert_dir: "/usr/local/share/ca-certificates/wire.com"
