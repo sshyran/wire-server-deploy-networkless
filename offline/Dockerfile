@@ -1,4 +1,4 @@
-FROM alpine:3.9
+FROM quay.io/wire/zauth
 
 RUN apk add --no-cache \
     ca-certificates \
@@ -33,4 +33,3 @@ COPY . /src
 WORKDIR /src
 
 RUN make wire-server-deploy
-

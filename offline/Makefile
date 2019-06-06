@@ -8,24 +8,33 @@ poetry:
 
 .PHONY: wire-server-deploy
 wire-server-deploy:
-	git clone https://github.com/wireapp/wire-server-deploy -b feature/ansible-configuration-binaries
 	cd wire-server-deploy/ansible && poetry install && make download
 
 ### run locally - warmup ###
 
 warmup: zauth build instructions
 
+.PHONY: clone
+clone:
+	rm -rf wire-server-deploy
+	rm -rf wire-server-deploy-networkless
+	git clone https://github.com/wireapp/wire-server-deploy -b feature/ansible-configuration-binaries
+	git clone https://github.com/wireapp/wire-server-deploy-networkless
+
 .PHONY: zauth
 zauth:
 	docker save quay.io/wire/zauth > zauth.tar
 
 .PHONY: build
-build:
+build: clone
 	docker build -t quay.io/wire/networkless-admin .
 	docker save quay.io/wire/networkless-admin > networkless-admin.tar
+
+.PHONY: push
+push:
 	## requires quay.io credentials
 	# docker login quay.io
-	# docker push quay.io/wire/networkless-admin
+	docker push quay.io/wire/networkless-admin
 
 instructions:
 	@echo hello
