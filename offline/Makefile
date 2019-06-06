@@ -8,7 +8,7 @@ poetry:
 
 .PHONY: wire-server-deploy
 wire-server-deploy:
-	cd wire-server-deploy/ansible && poetry install && make download
+	cd wire-server-deploy/ansible && source ~/.poetry/env && poetry install && make download
 
 ### run locally - warmup ###
 
