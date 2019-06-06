@@ -48,8 +48,8 @@ if [ -z "${DISPLAY+x}" ]; then
     CURSES="-curses"
 else
     if [ -n "${CURSES+x}" ]; then
-	echo "Disabling graphical display."
-	unset $DISPLAY
+        echo "Disabling graphical display."
+        unset $DISPLAY
     fi
 fi
 
@@ -70,32 +70,32 @@ USER=$(${WHOAMI})
 
 # Claim a tap device, and use it.
 function claim_tap() {
-    
+
     TAPDEVS=$($IP tuntap | $GREP -E ^tap | $SED "s/:.*//")
     TAPDEVCOUNT=$(echo -n "$TAPDEVS" | $WC -l)
     # First, try to fill in any gaps.
     LASTTAP=$(echo -n "$TAPDEVS" | $SED "s/t..//" | $SORT -g | $TAIL -n 1)
     for each in $($SEQ 0 $LASTTAP); do
-	if [ $(($TAPSTRIED + $TAPDEVCOUNT)) == $LASTTAP ]; then
-	    break
-	fi
-	if [ -z "$($IP tuntap | $GREP -E ^tap$each)" ]; then
-	    $SUDO $IP tuntap add dev tap$each mode tap user $USER
-	    if [ $? -eq 0 ]; then
-		echo tap$each
-		return 0
-	    fi
-	    TAPSTRIED=$(($TAPSTRIED+1))
-	fi
+        if [ $(($TAPSTRIED + $TAPDEVCOUNT)) == $LASTTAP ]; then
+            break
+        fi
+        if [ -z "$($IP tuntap | $GREP -E ^tap$each)" ]; then
+            $SUDO $IP tuntap add dev tap$each mode tap user $USER
+            if [ $? -eq 0 ]; then
+                echo tap$each
+                return 0
+            fi
+            TAPSTRIED=$(($TAPSTRIED+1))
+        fi
     done
 
     # Then, try to claim one on the end. up to 99
     for each in $($SEQ $(($LASTTAP+1)) 99); do
-	$SUDO $IP tuntap add dev tap$each mode tap user $USER
-	if [ $? -eq 0 ]; then
-	    echo tap$each
-	    return 0
-	fi
+        $SUDO $IP tuntap add dev tap$each mode tap user $USER
+        if [ $? -eq 0 ]; then
+            echo tap$each
+            return 0
+        fi
     done
 }
 
@@ -106,10 +106,10 @@ for each in ${!eth*}; do
     MACADDR="52:54:00:12:34:$(printf '%02g' `echo $TAPDEV | sed 's/tap//'`)"
     echo Setting up tap $TAPDEV for device $each with mac address $MACADDR
     if [ "${!each}" == "HOSTBRIDGE" ]; then
-	NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=HOSTBRIDGE.sh,downscript=HOSTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
+        NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=HOSTBRIDGE.sh,downscript=HOSTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
     else if [ "${!each}" == "GUESTBRIDGE" ]; then
-	     NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=GUESTBRIDGE.sh,downscript=GUESTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
-	 fi
+             NETWORK="$NETWORK -netdev tap,id=$each,ifname=$TAPDEV,script=GUESTBRIDGE.sh,downscript=GUESTBRIDGE-down.sh -device rtl8139,netdev=$each,mac=$MACADDR"
+         fi
     fi
 done
 
@@ -127,9 +127,8 @@ fi
 # VM has shut down, remove all of the taps.
 for each in $ASSIGNED_TAPS; do
     {
-	$SUDO ip tuntap del dev $each mode tap
+        $SUDO ip tuntap del dev $each mode tap
     }
 done
 
 #### you should not have to modify these. tell the author if you have to. ####
-

@@ -27,7 +27,7 @@ ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2
 ```
 
 ### Networking (Physical hosts only)
-#### Wireless Networking + USB dongle
+#### Wireless Networking + Etherner (Example)
 * Install a few extra packages if you are using wireless networking:
 
 ```sh
@@ -51,7 +51,7 @@ mkdir /root/sbin
 cp root/sbin/wlan root/sbin/ethnet /root/sbin
 ```
 
-* start wireless, and bring up the USB dongle.
+* start wireless and ethernet.
 ```
 /root/sbin/wlan start
 /root/sbin/ethnet start
@@ -61,7 +61,7 @@ cp root/sbin/wlan root/sbin/ethnet /root/sbin
 
 Should just work by default.
 
-### Installing and Configuring Services
+### Installing and Configuring Services (virtual hosts only)
 
 * First, if this is a new install, you should perform an update to ensure security patches are applied:
 ```
@@ -107,8 +107,8 @@ sudo cp etc/dnsmasq.d/proxybox.conf /etc/dnsmasq.d/
 * Edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example, if we are using the ethernet interface 'ens4':
 ```
         ens4:
-	    addresses:
-	      -  10.0.0.1/24
+            addresses:
+              -  10.0.0.1/24
 ```
 
 * Restart networking, isc-dhcp-server, and dnsmasq:
@@ -116,6 +116,7 @@ sudo cp etc/dnsmasq.d/proxybox.conf /etc/dnsmasq.d/
 sudo netplan apply
 sudo service isc-dhcp-server restart
 sudo service dnsmasq restart
+sudo /root/sbin/iptables
 ```
 
 ### Testing services
@@ -209,7 +210,7 @@ sudo apt dist-upgrade
 ### Preparing to install Kubernetes:
 
 (from https://linoxide.com/how-tos/ssh-login-with-public-key/)
-* on 'admin', create an SSH key. 
+* on 'admin', create an SSH key.
 ```
 ssh-keygen -t rsa
 ```
@@ -296,5 +297,3 @@ Consider this:
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment
 
 Then try, on admin-pc:
-
-

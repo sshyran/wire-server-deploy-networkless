@@ -14,9 +14,10 @@ We're going to assume basic command line skills, and that you have installed som
 
 First, make sure KVM is available and ready to use.
 
-* To see if your CPUs support it, see: https://vitux.com/how-to-check-if-your-processor-supports-virtualization-technology/ . We recommend method '2'.
+* To see if your CPUs support it, see: https://vitux.com/how-to-check-if-your-processor-supports-virtualization-technology/
+  * We recommend method '2'.
   * If method 2 does not tell you "KVM acceleration can be used", try method 3. If method 3 works, but method 2 does not, you need to enable virtualization in your BIOS.
-    * For loose directions on enabling virtualization in your BIOS, follow https://www.bleepingcomputer.com/tutorials/how-to-enable-cpu-virtualization-in-your-computer-bios/ .
+  * For loose directions on enabling virtualization in your BIOS, follow https://www.bleepingcomputer.com/tutorials/how-to-enable-cpu-virtualization-in-your-computer-bios/ .
 
 ### Install QEMU:
 
@@ -45,21 +46,21 @@ Make sure you log out, and back in again afterwards, to make these group changes
 When setting up a fake network of VMs for wire, there are several ways you can hook up the VMs to each other, network wise.
 
 for the purposes of this document, we are going to use:
-host <-> proxybox 
+host <-> proxybox
             |
-	 admin
-	    |
-	 kubenode1
-	    |
+         admin
+            |
+         kubenode1
+            |
          kubenode2
-	    |
-	 kubenode3
-	    |
-	 ansnode1
-	    |
-	 ansnode2
-	    |
-	 ansnode3
+            |
+         kubenode3
+            |
+         ansnode1
+            |
+         ansnode2
+            |
+         ansnode3
 
 This is to say, we are going to talk to the machine we are running on with a proxy, have one node for administration, three for kubernetes, and three for non-kubernetes services.
 
@@ -205,7 +206,7 @@ subnet 172.16.0.0 netmask 255.255.255.0 {
   option routers 172.16.0.1;
   option domain-name-servers 172.16.0.1;
 }
-```    
+```
 
 * Edit /etc/default/isc-dhcp-server, and Add br0 to the list of ipv4 interfaces dhcpd can listen to.
 ```
@@ -239,4 +240,3 @@ To boot into the OS:
 ```
 DRIVE=c ./start_kvm.sh
 ```
-
