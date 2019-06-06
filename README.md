@@ -56,7 +56,6 @@ cp root/sbin/wlan root/sbin/ethnet /root/sbin
 /root/sbin/wlan start
 /root/sbin/ethnet start
 ```
-<<<<<<< HEAD
 
 #### Wired Network Setup
 
