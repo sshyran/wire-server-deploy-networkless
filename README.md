@@ -56,6 +56,7 @@ cp root/sbin/wlan root/sbin/ethnet /root/sbin
 /root/sbin/wlan start
 /root/sbin/ethnet start
 ```
+<<<<<<< HEAD
 
 #### Wired Network Setup
 
@@ -149,10 +150,9 @@ curl -v -x 10.0.0.1:3128 http://wire.com/en/
 curl -v -x 10.0.0.1:3128 --cacert local_mitm.pem https://wire.com/en/
 ```
 
-* with transparent proxy.
+* with transparent http proxy.
 ```sh
 curl -v http://wire.com/en/
-curl -v --cacert local_mitm.pem https://wire.com/en/
 ```
 
 ### setting up an admin node:
@@ -255,6 +255,20 @@ Once you get to the 'ansible pre-kubernetes' step, run the setup-mitm-cert.yml s
 ```
 wire@admin:~/wire-server-deploy/ansible$ poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
 ```
+
+log into one of the master nodes.
+copy the config from .kube in root's homedirectory to being in your user's home directory.
+
+helm init
+
+clone wire-server-deploy.
+
+add the wire helm repo
+
+helm upgrade to add the demo-databases-ephemeral.
+
+helm add the wtf repo for kubernetes-charts.storage.googleapis.com
+
 
 === BELOW HERE IS DRAGONS ===
 
