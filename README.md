@@ -170,30 +170,12 @@ sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 ```sh
 scp docker-squid4/mk-ca-cert/certs/wire.com.crt $USERNAME@$ADMIN_PC_IP:/home/$USERNAME/
 ```
-  * back on admin_vm:
+  * back on admin:
 ```
 sudo cp wire.com.crt /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo update-ca-certificates
 ```
-
-* Check out this repository, and run 'make all', to install helm, and kubectl.
-```
-sudo apt install make
-mkdir -p ~/.local/bin
-export PATH=$PATH:~/.local/bin
-git clone https://github.com/wireapp/wire-server-deploy-networkless.git
-cd wire-server-deploy-networkless
-make
-```
-
-```
-apt install pip3
-pip3 install ansible
-pip3 install kubespray
-pip3 install jinja2
-```
-
 
 ### setting up the kubernetes nodes:
 Create three more virtual/physical nodes, attached to the physical interface you are running squid on.
@@ -209,33 +191,58 @@ sudo apt dist-upgrade
 
 ### Preparing to install Kubernetes:
 
+#### SSH with keys
 (from https://linoxide.com/how-tos/ssh-login-with-public-key/)
-* on 'admin', create an SSH key.
+If you want a bit higher security, you can copy SSH keys between your admin node, and your ansible/kubernetes nodes.
+
+* On 'admin', create an SSH key.
 ```
 ssh-keygen -t rsa
 ```
 
-* Install it on each of the kubenodes, so that you can SSH into them without a password:
+* Install your SSH key on each of the kubenodes, so that you can SSH into them without a password:
 ```
 ssh-copy-id -i ~/.ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
 ```
 Replace `$ANSIBLE_LOGIN_USERNAME` with the username of the account you set up when you installed the machine.
 
-Ansible needs permission to become the root user, so that it can perform administratine tasks.
+#### sudo without password
+Ansible can be configured to use a password for switching from the $ANSIBLE_LOGIN_USERNAME to the root user. This involves having the password lying about, so has security problems.
+If you want ansible to not be prompted for any administrative command (a different security problem!):
+
 * As root on each of the nodes, add the following line at the end of the /etc/sudoers file:
 ```
 <ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
 Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
 
-It is important that the IPs of machines do not change.
 
-* Get the IPs of all nodes.
+#### Fix IPs.
+It is important to ansible that the IPs of machines do not change.
+
+to accomplish this, there are several methods:
+
+##### Static Assignment via MAC
+
+You can configure your DHCP server with additional 'host' sections, matching against the MAC address, one for each host.
+Pros:
+simple, well documented.
+Cons:
+Does not work in our KVM environment, where a reboot can change your MAC address.
+
+##### Static Assignment via client-identifier
+
+You can configure your DHCP server with additional 'host' sections, matching against a client given identifier, one for each host.
+Cons:
+many DHCP client softwares (ubuntu 18 + netplan) cannot support changing the client ID to a known value. instead, they submit a GUID, based on the mac address. 
+Does not work with ubuntu 18 + netplan in our KVM environment, where a reboot can change your Mac address.
+
+* on the Proxybox:, get the IPs of all nodes:
 ```
 cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u
 ```
 
-* set the IPs of the nodes in /etc/dhcp/dhcpd.conf, so that ansible doesn't break:
+* On the proxybox, set the IPs of the nodes in /etc/dhcp/dhcpd.conf, so that ansible doesn't break:
 ```
 sudo bash -c 'cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u | sed "s/\(.*\) \(.*\)/host \2\n\toption dhcp-client-identifier \"\2\"\n\tfixed-address \1\n}\n\n/" >> /etc/dhcp/dhcpd.conf'
 ```
@@ -249,41 +256,62 @@ host <hostname> {
 
 * Restart isc-dhcp-server for the previous to go into effect.
 
-From here, follow wire-server-deploy/ansible/README.md , with the following exception:
-
-Once you get to the 'ansible pre-kubernetes' step, run the setup-mitm-cert.yml script, to copy our certificate to all of the nodes:
+FIXME: DOES NOT WORK WITH UBUNTU 18
+* now log into each node, and add the following line to the end of /etc/dhcp/dhclient.conf:
 ```
-wire@admin:~/wire-server-deploy/ansible$ poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
+send dhcp-client-identifier = gethostname();
 ```
 
-log into one of the master nodes.
-copy the config from .kube in root's homedirectory to being in your user's home directory.
+##### "Static Assignment" via hostname
 
-helm init
+You can configure your DHCP server with 'class' sections matching the hostname given by the client, and put 'pools' of leases with a single lease in each, that only allows an individual class.
+Pros:
+Works in our KVM environment.
+Easy to tell most systems to provide a hostname, Ubuntu 18 does so by default.
+Cons:
+Long, ugly, complicated configuration.
+Ubuntu 18 must be security patched before it provides a hosntame.
 
-clone wire-server-deploy.
+For each host, add one class section BEFORE our subnet declaration in /etc/dhcp/dhcpd.conf. for example:
+```
+class "admin" {
+  match if option host-name = "admin";
+}
+```
 
-add the wire helm repo
+Rewrite your subnet section. create a pool containing only the leases you've been giving out, and deny members of each of your classes from getting a lease from that pool. now for each class, create a pool, allow that class access to that pool, and stick one IP in that pool. The result shoud look something like this:
+```
+subnet 10.0.0.0 netmask 255.255.255.0 {
+  option subnet-mask 255.255.255.0;
+  option routers 10.0.0.1;
+  option broadcast-address 10.0.0.255;
+  pool {
+    deny members of "admin";
+    range 10.0.0.8 10.0.0.28;
+  }
+  pool {
+    allow members of "admin";
+    range 10.0.0.38 10.0.0.38;
+  }
+}
+```
 
-helm upgrade to add the demo-databases-ephemeral.
+#### Deploying wire
+From here, follow wire-server-deploy/ansible/README.md, with the following exception:
 
-helm add the wtf repo for kubernetes-charts.storage.googleapis.com
-
+* Once you get to the 'ansible pre-kubernetes' step, check out this repo, and run the setup-mitm-cert.yml script, to copy our certificate to all of the nodes:
+```
+cd ~
+git clone https://github.com/wireapp/wire-server-deploy-networkless.git
+cd wire-server-deploy/ansible
+poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
+```
 
 === BELOW HERE IS DRAGONS ===
 
-
-
-helm init
-
-clone wire-server-deploy.
-
-add the wire helm repo
-
 helm upgrade to add the demo-databases-ephemeral.
 
 helm add the wtf repo for kubernetes-charts.storage.googleapis.com
-
 
 Making Squid work offline:
 add 'offline_mode on' to your squid.conf
@@ -295,5 +323,3 @@ Consider this:
 
 - https://github.com/kubernetes-sigs/kubespray#ansible
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment
-
-Then try, on admin-pc:
