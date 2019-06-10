@@ -268,9 +268,11 @@ Does not work in our KVM environment, where a reboot can change your MAC address
 
 ##### Static Assignment via client-identifier
 
+WARNING: this is complicated by the fact that [some playbooks we use change the hostnames of their target machines](https://github.com/wireapp/wire-server-deploy/blob/80e63ce74eb6ff178802e821f83fe21922199e56/ansible/README.md#warning-host-re-use).
+
 You can configure your DHCP server with additional 'host' sections, matching against a client given identifier, one for each host.
 Cons:
-many DHCP client softwares (ubuntu 18 + netplan) cannot support changing the client ID to a known value. instead, they submit a GUID, based on the mac address. 
+many DHCP client softwares (ubuntu 18 + netplan) cannot support changing the client ID to a known value. instead, they submit a GUID, based on the mac address.
 Does not work with ubuntu 18 + netplan in our KVM environment, where a reboot can change your Mac address.
 
 * on the Proxybox:, get the IPs of all nodes:
