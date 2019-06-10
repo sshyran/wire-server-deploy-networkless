@@ -113,9 +113,9 @@ cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/admin
 cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode1
 cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode2
 cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode3
-cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode4
-cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode5
-cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/kubenode6
+cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/ansnode1
+cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/ansnode2
+cp wire-app/wire-server-deploy-networkless/kvmhelpers/*.sh kvm/ansnode3
 ```
 
 #### Choosing an interface:
@@ -125,7 +125,7 @@ If the system you are using has a graphical interface, and you elected to set up
 
 If you edit the 'start_kvm.sh' script that you copied into the place you're storing your VMs, there are self-explaining configuration options at the top of the file. so let me explain them. :)
 
-* The first user-editable option is MEM, or how much ram you want to give your VM, in megabytes.
+* The first user-editable option is MEM, or how much ram you want to give your VM, in megabytes. At present, our testing requires 4096MB for the ansnodes, and 2048 for the rest.
 * The second option is CPUS, which sets how many CPUs you can see from inside of the VM. Note that this is not a hard reservation, so you can have two CPUs for two VMs, even if you only have two real CPUs.
 * The third and forth options are what files to use as the virtual cd-rom and virtual hard disks.
 
@@ -236,7 +236,9 @@ At this point, you can install ubuntu on each of your nodes like normal.
 
 #### Ubuntu 16 (mini ISO)
 Note that the AMD64 mini iso for xenial is broken, and will not install.
-If you're installing ubuntu 16.04 (mini.iso), and want text mode:
+
+* If you want to perform your install in text mode:
+```
 down arrow
 tab
 backspace 6 times
@@ -244,10 +246,12 @@ left arrow 22 times
 backspace 7 times
 type 'debian-installer/framebuffer=false'
 enter
+```
 
 #### Ubuntu 16 (official ISO)
 Downloaded from: http://releases.ubuntu.com/16.04.6/ubuntu-16.04.6-server-amd64.iso
-
+* If you want to perform your install in text mode:
+```
 enter
 f6
 escape
@@ -257,32 +261,26 @@ left arrow 27 times.
 backspace 7 times.
 type 'debian-installer/framebuffer=false'
 enter
-
+```
 
 #### Performing the install
 
-* Proceed with installation as normal. when you get to the 'Finish the installation' stage where it prompts you to remove the CD and reboot
-* hit 'Go Back' to avoid rebooting. go out to the 'Ubuntu installer main menu'
-* select 'Execute a shell', and drop to a shell.
-* at the shell prompt:
+Proceed with installation as normal. When you get to the 'Finish the installation' stage where it prompts you to remove the CD and reboot:
+* Hit 'Go Back' to avoid rebooting. go out to the 'Ubuntu installer main menu'
+* Select 'Execute a shell', and drop to a shell.
+* At the shell prompt:
 ```
 cd /target
 chroot ./
-apt install openssh-server
+apt install -y openssh-server
 vi etc/default/grub
 ```
-Using vi, comment out the 'GRUB_CMDLINE_LINUX_DEFAULT' line, set 'GRUB_CMDLINE_LINUX' to just 'text', and uncomment the 'GRUB_TERMINAL=console' line.
+* Using vi, comment out the 'GRUB_CMDLINE_LINUX_DEFAULT' line, set 'GRUB_CMDLINE_LINUX' to just 'text', and uncomment the 'GRUB_TERMINAL=console' line.
+* Write and Quit vi, exit the chroot, and exit the shell. You should be back in the installation menu.
+* Re-run the 'Install the grub bootloader on a hard disk' step.
+* Reboot.
 
-exit vi, exit the chroot, and exit the shell. you should be back in the installation menu.
-re-run the 'install the grub bootloader' step.
-
-reboot.
-
-
-
-
-
-you will have to shut down the VM to change it to booting from the hard drive, instead of the CD. to do that, you can log into another terminal, and kill -15 the qemu process.
+You will have to shut down the VM to change it to booting from the hard drive, instead of the CD. to do that, you can log into another terminal, and kill -15 the qemu process.
 
 To boot into the OS:
 ```

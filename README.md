@@ -196,8 +196,15 @@ curl -v http://wire.com/en/
 
 The admin node is the machine we're going to perform administrative tasks with. This includes both setting up our kubernetes cluster, and setting up non-kubernetes services via ansible.
 
-* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
+
+#### Ubuntu 18
+* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso)
   * If you would like to check the checksum, please get it from the top of this file.
+
+#### Ubuntu 16
+* Install [ubuntu 16 server](http://releases.ubuntu.com/16.04/ubuntu-16.04.6-server-amd64.iso)
+
+#### Adding CA Cert:
 
 * Add local ca cert to admin:
 ```sh
@@ -215,11 +222,18 @@ sudo update-ca-certificates
 ```
 
 ### setting up the kubernetes nodes:
+
+#### Provisioning:
 Create three more virtual/physical nodes, attached to the physical interface you are running squid on.
 
-* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
+##### Ubuntu 18
+* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso)
   * If you would like to check the checksum, please get it from the top of this file.
 
+##### Ubuntu 16
+* Install [ubuntu 16 server](http://releases.ubuntu.com/16.04/ubuntu-16.04.6-server-amd64.iso)
+
+#### Post-Installation
 * After installing, make sure you perform security updates:
 ```
 sudo apt update
@@ -305,16 +319,15 @@ send dhcp-client-identifier = gethostname();
 You can configure your DHCP server with 'class' sections matching the hostname given by the client, and put 'pools' of leases with a single lease in each, that only allows an individual class.
 Pros:
 Works in our KVM environment.
-Easy to tell most systems to provide a hostname, Ubuntu 18 does so by default.
+Easy to tell most systems to provide a hostname, Ubuntu 18 (after security patching) does so by default.
 Cons:
 Long, ugly, complicated configuration.
 Ubuntu 18 must be security patched before it provides a hosntame.
 
+###### Server Side
 For each host, add one class section BEFORE our subnet declaration in /etc/dhcp/dhcpd.conf. for example:
 ```
-class "admin" {
-  match if option host-name = "admin";
-}
+class "admin" { match if option host-name = "admin"; }
 ```
 
 Rewrite your subnet section. create a pool containing only the leases you've been giving out, and deny members of each of your classes from getting a lease from that pool. now for each class, create a pool, allow that class access to that pool, and stick one IP in that pool. The result shoud look something like this:
@@ -333,6 +346,14 @@ subnet 10.0.0.0 netmask 255.255.255.0 {
   }
 }
 ```
+
+NOTE: when you install kubernetes, the kubenode1-3 nodes rename themselves kubenode01-03, so you will need to allow that name in the rules for the three kubernetes nodes, and add a class section for each of those names as well.
+NOTE: when you install cassandra, the ansnode1-3 nodes rename themserves cassandra01-03, so you will need to allow that name in the rules for the three kubernetes nodes, and add a class section for each of those names as well.
+
+###### Client side
+On ubuntu 18.04, just make sure it got security patched.
+
+On ubuntu 16.04.06, it should work out of the box.
 
 #### Deploying Wire
 From here, follow wire-server-deploy/ansible/README.md, with the following exception:
