@@ -17,6 +17,8 @@ Sources:
 
 ## Installing
 
+
+### Ubuntu18
 Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
 
 Here is the checksum again if you want to trust this repo instead of the ubuntu page:
@@ -25,6 +27,10 @@ Here is the checksum again if you want to trust this repo instead of the ubuntu 
 $ sha256sum ubuntu-18.04.2-live-server-amd64.iso
 ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
 ```
+
+### Ubuntu16
+Install [Ubuntu 16 server](http://releases.ubuntu.com/16.04.6/ubuntu-16.04.6-server-amd64.iso)
+
 
 ### Networking (Physical hosts only)
 #### Wireless Networking + Etherner (Example)
@@ -92,9 +98,9 @@ sudo cp root/sbin/iptables /root/sbin/
 INTERFACESv4=ens4
 ```
 
-* Remove the lxd configuration for dnsmasq:
+* If it exists, remove the lxd configuration for dnsmasq:
 ```
-rm /etc/dnsmasq.d/lxd
+[ -f /etc/dnsmasq.d/lxd ] && sudo rm /etc/dnsmasq.d/lxd
 ```
 
 * Copy the dnsmasq snippet we've prepared for providing DNS services:
@@ -103,20 +109,45 @@ sudo cp etc/dnsmasq.d/proxybox.conf /etc/dnsmasq.d/
 ```
 * If you know a specific DNS server you'd rather use than google's, edit /etc/dnsmasq.d/proxybox.conf, and set it there.
 
-
+#### Adding a second network interface
+##### Ubuntu 18
 * Edit /etc/netplan/50-cloud-init.yaml, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example, if we are using the ethernet interface 'ens4':
 ```
         ens4:
             addresses:
               -  10.0.0.1/24
 ```
-
-* Restart networking, isc-dhcp-server, and dnsmasq:
-```
 sudo netplan apply
+```
+* Restart networking:
+```
+##### Ubuntu 16
+* Edit /etc/network/interfaces, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example, if we are using the ethernet interface 'ens4':
+```
+iface ens4 inet static
+      address 10.0.0.1
+      netmask 255.255.255.0
+```
+* Don't forget to add the new interface on the 'auto' line to make the system bring it up automatically. If the new interface is 'ens4', and the currently used interface is 'ens3':
+```
+auto ens3 ens4
+```
+
+* Bring up the new interface.
+```
+sudo ifup ens4
+```
+
+* Manually add google as your system nameserver.
+```
+sudo bash -c 'echo "nameserver 8.8.8.8" >> /etc/resolvconf/resolv.conf.d/head'
+```
+
+#### Restarting services
+* Restart isc-dhcp-server, and dnsmasq:
+```
 sudo service isc-dhcp-server restart
 sudo service dnsmasq restart
-sudo /root/sbin/iptables
 ```
 
 ### Testing services
@@ -140,6 +171,12 @@ While DNS is working and IPs resolve, we do not have internet, since we have not
 
 Install and run our squid container on proxybox. Follow the directions in "README-Wire.md" in the [docker-squid4](https://github.com/wireapp/docker-squid4) repo.
 
+
+### Forward traffic to squid
+* Run the iptables script, to forward all traffic to the squid daemon.
+```
+sudo /root/sbin/iptables
+```
 ### Test it!
 
 Connect a laptop or a VM to the local network and try it out:
@@ -215,7 +252,6 @@ If you want ansible to not be prompted for any administrative command (a differe
 <ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
 ```
 Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
-
 
 #### Fix IPs.
 It is important to ansible that the IPs of machines do not change.
@@ -296,7 +332,7 @@ subnet 10.0.0.0 netmask 255.255.255.0 {
 }
 ```
 
-#### Deploying wire
+#### Deploying Wire
 From here, follow wire-server-deploy/ansible/README.md, with the following exception:
 
 * Once you get to the 'ansible pre-kubernetes' step, check out this repo, and run the setup-mitm-cert.yml script, to copy our certificate to all of the nodes:

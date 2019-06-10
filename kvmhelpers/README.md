@@ -234,6 +234,54 @@ Nothing needs done for this.
 
 At this point, you can install ubuntu on each of your nodes like normal.
 
+#### Ubuntu 16 (mini ISO)
+Note that the AMD64 mini iso for xenial is broken, and will not install.
+If you're installing ubuntu 16.04 (mini.iso), and want text mode:
+down arrow
+tab
+backspace 6 times
+left arrow 22 times
+backspace 7 times
+type 'debian-installer/framebuffer=false'
+enter
+
+#### Ubuntu 16 (official ISO)
+Downloaded from: http://releases.ubuntu.com/16.04.6/ubuntu-16.04.6-server-amd64.iso
+
+enter
+f6
+escape
+left arrow 5 times.
+backspace 5 times.
+left arrow 27 times.
+backspace 7 times.
+type 'debian-installer/framebuffer=false'
+enter
+
+
+#### Performing the install
+
+* Proceed with installation as normal. when you get to the 'Finish the installation' stage where it prompts you to remove the CD and reboot
+* hit 'Go Back' to avoid rebooting. go out to the 'Ubuntu installer main menu'
+* select 'Execute a shell', and drop to a shell.
+* at the shell prompt:
+```
+cd /target
+chroot ./
+apt install openssh-server
+vi etc/default/grub
+```
+Using vi, comment out the 'GRUB_CMDLINE_LINUX_DEFAULT' line, set 'GRUB_CMDLINE_LINUX' to just 'text', and uncomment the 'GRUB_TERMINAL=console' line.
+
+exit vi, exit the chroot, and exit the shell. you should be back in the installation menu.
+re-run the 'install the grub bootloader' step.
+
+reboot.
+
+
+
+
+
 you will have to shut down the VM to change it to booting from the hard drive, instead of the CD. to do that, you can log into another terminal, and kill -15 the qemu process.
 
 To boot into the OS:
