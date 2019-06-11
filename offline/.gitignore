@@ -1,0 +1,4 @@
+*.tar
+*.deb
+*.tar.gz
+wire-server-deploy*
