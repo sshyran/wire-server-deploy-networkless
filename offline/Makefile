@@ -11,10 +11,12 @@ poetry:
 
 .PHONY: clone
 clone:
+	rm -rf wire-server
 	rm -rf wire-server-deploy
 	rm -rf wire-server-deploy-networkless
 	git clone https://github.com/wireapp/wire-server-deploy
 	git clone https://github.com/wireapp/wire-server-deploy-networkless
+	git clone --depth 1 https://github.com/wireapp/wire-server
 
 .PHONY: wire-server-deploy
 wire-server-deploy:
@@ -50,6 +52,10 @@ zipme:
 	@echo see '../tmp/admin.tar.gz' file
 	@echo use the following checksum when downloading it from an untrusted source:
 	sha256sum ../tmp/admin.tar.gz
+
+.PHONY: clean
+clean:
+	rm -f zauth.tar networkless-admin.tar
 
 ### run locally - offline ###
 
