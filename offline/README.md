@@ -48,10 +48,12 @@ docker save quay.io/wire/networkless-admin > networkless-admin.tar
 docker load < networkless-admin.tar
 
 # cd to a fresh, empty directory
-mkdir ../admin_work_dir && cd ../admin_work_dir
+mkdir -p ../admin_work_dir && cd ../admin_work_dir
+mkdir -p ~/.ssh/ssh-for-docker
+# copy ssh key
+cp ~/.ssh/id_rsa ~/.ssh/ssh-for-docker/
 
-
-docker run -it --network=host -v $(pwd):/mnt quay.io/wire/networkless-admin
+docker run -it --network=host -v $(pwd):/mnt -v ~/.ssh/ssh-for-docker:/root/.ssh quay.io/wire/networkless-admin
 # inside the container:
 cp -a /src/* /mnt
 # run ansible from here. If you make any changes, they will be written to your host file system
@@ -59,11 +61,13 @@ cp -a /src/* /mnt
 cd /mnt/wire-server-deploy/ansible
 ```
 
+Any changes inside the container under `/mnt` (host system: `admin_work_dir`) and `/root/.ssh` (host system: `~/.ssh/ssh-for-docker`) will persist (albeit as user `root`), everything else will not, so be careful when creating other files.
+
 On subsequent times:
 
 ```
 cd admin_work_dir
-docker run -it --network=host -v $(pwd):/mnt quay.io/wire/networkless-admin
+docker run -it --network=host -v $(pwd):/mnt -v ~/.ssh/ssh-for-docker:/root/.ssh quay.io/wire/networkless-admin
 # do work.
 ```
 

@@ -21,6 +21,7 @@ clone:
 .PHONY: wire-server-deploy
 wire-server-deploy:
 	cd wire-server-deploy/ansible && poetry install && make download
+	cd wire-server-deploy/ansible && ln -s ../../wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml setup-mitm-cert.yml
 
 ### run locally - warmup ###
 
