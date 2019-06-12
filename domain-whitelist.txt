@@ -1,0 +1,31 @@
+# this is the list of domains that have been contacted by squid during
+# a test networkless wire installation
+
+api.snapcraft.io
+archive.apache.org
+artifacts.elastic.co
+auth.docker.io
+centerforopenscience.github.io
+changelogs.ubuntu.com
+coreos.com
+d3uo42mtx6z2cr.cloudfront.net
+dl-cdn.alpinelinux.org
+dl.k8s.io
+dl.minio.io
+download.docker.com
+gcr.io
+github-production-release-asset-2e65be.s3.amazonaws.com
+github.com
+k8s.gcr.io
+kubernetes-charts-incubator.storage.googleapis.com
+kubernetes-charts.storage.googleapis.com
+production.cloudflare.docker.com
+public-wire-com.s3-eu-west-1.amazonaws.com
+quay.io
+raw.githubusercontent.com
+registry-1.docker.io
+repo1.maven.org
+s3-eu-west-1.amazonaws.com
+security.ubuntu.com
+storage.googleapis.com
+us.archive.ubuntu.com
