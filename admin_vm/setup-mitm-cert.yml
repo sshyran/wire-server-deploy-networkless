@@ -2,7 +2,7 @@
 
 - hosts: all
   vars:
-    cert_local_dir: "/usr/local/share/ca-certificates/wire.com"
+    cert_local_dir: "/usr/local/share/ca-certificates"
     cert_dir: "/usr/local/share/ca-certificates/wire.com"
     cert_name: "local_mitm.crt"
   tasks:
