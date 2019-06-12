@@ -27,7 +27,8 @@ RUN apk add --no-cache \
     musl-dev \
     postgresql-dev \
     neovim \
-    the_silver_searcher
+    the_silver_searcher \
+    sshpass
 
 RUN pip install poetry
 
