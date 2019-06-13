@@ -49,11 +49,12 @@ docker load < networkless-admin.tar
 
 # cd to a fresh, empty directory
 mkdir -p ../admin_work_dir && cd ../admin_work_dir
-mkdir -p ~/.ssh/ssh-for-docker
+mkdir -p ../dot_ssh
+mkdir -p ../dot_kube
 # copy ssh key
-cp ~/.ssh/id_rsa ~/.ssh/ssh-for-docker/
+cp ~/.ssh/id_rsa ../dot_ssh/
 
-docker run -it --network=host -v $(pwd):/mnt -v ~/.ssh/ssh-for-docker:/root/.ssh quay.io/wire/networkless-admin
+docker run -it --network=host -v $(pwd):/mnt -v $(pwd)/../dot_ssh:/root/.ssh -v $(pwd)/../dot_kube:/root/.kube quay.io/wire/networkless-admin
 # inside the container:
 cp -a /src/* /mnt
 # run ansible from here. If you make any changes, they will be written to your host file system
@@ -67,7 +68,7 @@ On subsequent times:
 
 ```
 cd admin_work_dir
-docker run -it --network=host -v $(pwd):/mnt -v ~/.ssh/ssh-for-docker:/root/.ssh quay.io/wire/networkless-admin
+docker run -it --network=host -v $(pwd):/mnt -v $(pwd)/../dot_ssh:/root/.ssh -v $(pwd)/../dot_kube:/root/.kube quay.io/wire/networkless-admin
 # do work.
 ```
 
