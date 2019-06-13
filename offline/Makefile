@@ -22,6 +22,7 @@ clone:
 wire-server-deploy:
 	cd wire-server-deploy/ansible && poetry install && make download
 	cd wire-server-deploy/ansible && ln -s ../../wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml setup-mitm-cert.yml
+	cd wire-server-deploy/ansible && ln -s ../../wire-server-deploy-networkless/admin_vm/kubernetes_proxy.yml kubernetes_proxy.yml
 
 ### run locally - warmup ###
 
