@@ -382,3 +382,40 @@ Consider this:
 
 - https://github.com/kubernetes-sigs/kubespray#ansible
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment
+
+
+## Pitfalls / FAQ
+
+### A note on proxy settings and k8s
+
+In rare cases, squid has been observed to remove the body from a response, which may result in issues like this:
+
+```
+"k8s.gcr.io/defaultbackend:1.4": rpc error: code = Unknown desc = error pulling image configuration: image config verification failed for digest sha256:846921f0fe0e57df9e4d4961c0c4af481bf545966b5f61af68e188837363530e
+```
+
+If you set the proxy explicitly in the k8s environment, these errors should go away:
+
+#### With ansible:
+
+```
+poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/kubernetes_proxy.yml -vv -e proxy_host=10.0.0.1 -e proxy_port=3128
+```
+
+#### Manually:
+
+On every kube node, add the following to `/etc/systemd/system/docker.service.d/docker-options.conf`:
+
+```
+[Service]
+Environment="HTTP_PROXY=http://10.0.0.1:3128/" "HTTPS_PROXY=http://10.0.0.1:3128/" "DOCKER_OPTS=  --data-root=/var/lib/docker --log-opt max-size=50m --log-opt max-file=5 --iptables=false"
+```
+
+followed by:
+
+```
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+For more info, [check out the docker manual](https://docs.docker.com/config/daemon/systemd/).
