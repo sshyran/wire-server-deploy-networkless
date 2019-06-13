@@ -1,4 +1,5 @@
 - hosts: k8s-cluster
+  serial: 1
   vars:
     # example:
     # proxy_host: 10.0.0.1
@@ -23,3 +24,7 @@
 
     - name: restart docker
       shell: systemctl restart docker
+
+    - name: wait for docker restart on that node before proceeding
+      pause:
+        seconds: 30
