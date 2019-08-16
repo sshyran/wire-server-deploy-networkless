@@ -1,5 +1,6 @@
 This repo contains tools for using the [docker-squid4](https://github.com/wireapp/docker-squid4) docker image to set up a completely transparent proxy host.
 This host is to proxy all traffic during a WIRE installation, so that the exact same installation can be performed from cache, without internet access.
+It also contains scripts and documentation for prototyping this environment using the KVM virtualization suite, on linux.
 
 # Status
 
@@ -14,28 +15,30 @@ Sources:
 - https://github.com/wireapp/docker-squid4
 - http://roberts.bplaced.net/index.php/linux-guides/centos-6-guides/proxy-server/squid-transparent-proxy-http-https
 
+## Installing a proxybox:
 
-## Installing
-
+These directions are made to deploy either on a virtual server, or a physical server. If you need help setting up KVM, please see [our KVM README.md](kvmhelper/README.md).
 
 ### Ubuntu18
-Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso) (including 'stable' docker snap, otherwise no special choices needed)
+Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.3-live-server-amd64.iso)
 
-Here is the checksum again if you want to trust this repo instead of the ubuntu page:
+For security purposes, we recommend verifying the SHA256SUM of your downloaded image.
+
+Here is the checksum we got, if you want to trust this repo instead of the ubuntu page:
 
 ```sh
-$ sha256sum ubuntu-18.04.2-live-server-amd64.iso
-ea6ccb5b57813908c006f42f7ac8eaa4fc603883a2d07876cf9ed74610ba2f53  ubuntu-18.04.2-live-server-amd64.iso
+$ sha256sum ubuntu-18.04.3-live-server-amd64.iso
+b9beac143e36226aa8a0b03fc1cbb5921cff80123866e718aaeba4edb81cfa63  ubuntu-18.04.3-live-server-amd64.iso
 ```
 
 ### Ubuntu16
 Install [Ubuntu 16 server](http://releases.ubuntu.com/16.04.6/ubuntu-16.04.6-server-amd64.iso)
 
-
 ### Networking (Physical hosts only)
-#### Wireless Networking + Etherner (Example)
-* Install a few extra packages if you are using wireless networking:
+#### Wireless Networking + Ethernet (Example)
+If you are using wireless networking to talk to the internet, and ethernet to talk to the hosts using this proxy:
 
+* Install some extra packages for wireless networking:
 ```sh
 apt-get install linux-wlan-ng rfkill wpasupplicant pump resolvconf
 ```
@@ -65,7 +68,7 @@ cp root/sbin/wlan root/sbin/ethnet /root/sbin
 
 #### Wired Network Setup
 
-Should just work by default.
+Ubuntu's wired network management should just work by default.
 
 ### Installing and Configuring Services (virtual hosts only)
 
@@ -198,7 +201,7 @@ The admin node is the machine we're going to perform administrative tasks with. 
 
 
 #### Ubuntu 18
-* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso)
+* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.3-live-server-amd64.iso)
   * If you would like to check the checksum, please get it from the top of this file.
 
 #### Ubuntu 16
@@ -227,7 +230,7 @@ sudo update-ca-certificates
 Create three more virtual/physical nodes, attached to the physical interface you are running squid on.
 
 ##### Ubuntu 18
-* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso)
+* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.3-live-server-amd64.iso)
   * If you would like to check the checksum, please get it from the top of this file.
 
 ##### Ubuntu 16

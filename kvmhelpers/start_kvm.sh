@@ -7,7 +7,7 @@ MEM=2048
 CPUS=2
 
 # The CDROM image. Used for installing.
-CDROM=../ubuntu-18.04.2-live-server-amd64.iso
+CDROM=../ubuntu-18.04.3-live-server-amd64.iso
 
 # The disk image.
 DISK=drive-c.img
