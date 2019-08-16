@@ -64,7 +64,7 @@ host <-> proxybox
             |
          ansnode3
 
-This is to say, we are going to create a proxy machine which will be the only thing with internet access. this internet access will be talk to the machine we are running on with a proxy, have one node for administration, three for kubernetes, and three for non-kubernetes services.
+This is to say, we are going to create a proxy machine which will be the only thing with internet access. In addition to this machine, we will have one node for administration tasks, three for kubernetes, and three for non-kubernetes services, managed by ansible.
 
 We are going to refer to this as 'network plan 1'.
 
@@ -155,7 +155,7 @@ For LOCALBRIDGE, we are going to install and configure an ip-masquerading firewa
 sudo apt install ufw isc-dhcp-server bind9
 ```
 
-* make sure we can connect on port 22 tcp so we can ssh into the .
+* make sure we can connect on port 22 tcp so we can ssh into the hypervisor from the outside world, and from machines using LOCALBRIDGE.
 ```
 sudo ufw allow 22/tcp
 ```
@@ -231,7 +231,7 @@ In order for VMs plugged into the LOCALBRIDGE to get an address, they will use D
 * edit /etc/dhcp/dhcpd.conf
  * comment out the line at the top reading: 'option domain-name "example.org";'
  * comment out the line near the top reading: 'option domain-name-servers ns1.example.org, ns2.example.org;'
- * add the following to the end of the file, to provide addresses to your selected LOCALNET subnet range:
+ * add the following to the end of the file, to provide addresses to your selected LOCALBRIDGE subnet range. Make sure to change the addresses to match your selected LOCALBRIDGE subnet:
 ```
 # provide DHCP to our hosted kvm network.
 subnet 172.16.0.0 netmask 255.255.255.0 {
