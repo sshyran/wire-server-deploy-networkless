@@ -187,7 +187,7 @@ BRIDGEIP=172.16.0.1
 BRIDGEBROADCAST=172.16.0.255
 ```
 
-As with the last step, to change these, you can either edit each HOSTBRIDGE-vars.sh file, or, abuse some quick and dirty sed/bash scripts:
+As with the last step, to change these, you can either edit each HOSTBRIDGE-vars.sh file, or use some quick and dirty sed/bash scripts:
 ```
 for each in $(find ./ -name HOSTBRIDGE-vars.sh) ; do { sed -i "s/BRIDGEIP=172.16.0.1/BRIDGEIP=172.18.0.1/" $each ; } done;
 for each in $(find ./ -name HOSTBRIDGE-vars.sh) ; do { sed -i "s/BRIDGEBROADCAST=172.16.0.255/BRIDGEBROADCAST=172.18.0.255/" $each ; } done;
