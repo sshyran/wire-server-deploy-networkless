@@ -173,7 +173,7 @@ for each in $(find ./ -name GUESTBRIDGE-vars.sh) ; do { sed -i "s/BRIDGE=br1/BRI
 
 ###### Sharing internet on the HOSTBRIDGE via IP Masquerading
 
-We're using the UFW product to provide internet to any machine using the HOSTBRIDGE strategy. similar to the 'Sharing Bridge Devices' step, we're going to have to be a bit aware of our neighbors when picking an IP block to use between the physical machine, and virtual machines on HOSTBRIDGE. We're also going to have to pick something that does not conflict with any of the other interfaces on this machine, lest we accidentally mess up routing for the interface we use to get internet, and access TO the machine.
+We're using the [UFW](https://wiki.debian.org/Uncomplicated%20Firewall%20%28ufw%29) product to provide internet to any machine using the HOSTBRIDGE strategy. similar to the 'Sharing Bridge Devices' step, we're going to have to be a bit aware of our neighbors when picking an IP block to use between the physical machine, and virtual machines on HOSTBRIDGE. We're also going to have to pick something that does not conflict with any of the other interfaces on this machine, lest we accidentally mess up routing for the interface we use to get internet, and access TO the machine.
 
 Usually, I pick '172.16.0/24' as a safe default. docker picks '172.17.0/24', so i suggest avoiding that. for an idea what your options are, look at the interface of the machine you're getting internet acces via, and see if it's on a [Private Network](https://en.wikipedia.org/wiki/Private_network). Select a '/24' network (that is, a range of 255 IPs in a block, in one of the Private IPv4 address ranges) that none of your coworkers are using on this box, and use it for the following steps.
 
