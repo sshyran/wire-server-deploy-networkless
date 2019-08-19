@@ -6,7 +6,7 @@ This document and the files contained in this directory contain instructions and
 
 ## Assumptions:
 
-We're going to assume basic command line skills, and that you have installed some version of ubuntu, debian, or a debian derivitive on a machine you plan on using as a hypervisor.
+We're going to assume basic command line skills, and that you have installed some version of ubuntu, debian, or a debian derivative on a machine you plan on using as a hypervisor.
 
 ## Installing KVM Virtual Machines
 
@@ -64,7 +64,7 @@ host <-> proxybox
             |
          ansnode3
 
-This is to say, we are going to create a proxy machine which will be the only thing with internet access. In addition to this machine, we will have one node for administration tasks, three for kubernetes, and three for non-kubernetes services, managed by ansible.
+This is to say, we are going to create a proxy machine which will be the only thing with internet access. In addition to this machine, we will have one node for administration tasks(during the install, and for maintainence activities), three for kubernetes, and three for non-kubernetes services, managed by ansible.
 
 We are going to refer to this as 'network plan 1'.
 
