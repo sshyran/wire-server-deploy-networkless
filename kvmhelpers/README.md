@@ -128,7 +128,7 @@ If the system you are using has a graphical interface, and you elected to set up
 
 If you edit the 'start_kvm.sh' script in any of the directories that we're using to contain a VM, there are self-explaining configuration options at the top of the file. So let me explain them. :)
 
-* The first user-editable option is MEM, or how much ram you want to give your VM, in megabytes. At present, our testing requires 6144MB for ansnode[1-3], and 2048MB for the rest.
+* The first user-editable option is MEM, or how much ram you want to give your VM, in megabytes. At present, our testing requires 6144MB for ansnode[1-3], 3072MB for kubenode[1-3], and 2048MB for the admin node and proxybox.
 * The second option is CPUS, which sets how many CPUs you can see from inside of the VM. Note that this is not a hard reservation, so you can have up to two CPUs for each of your VMs, even if you only have two physical CPUs.
 * The third and forth options are what files to use as the virtual cd-rom and virtual hard disks.
 
