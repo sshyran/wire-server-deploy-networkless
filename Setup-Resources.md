@@ -6,9 +6,9 @@ To contain directions in how to change a proxybox so that it serves all of the r
 
 ### Setting up to serve raw content
 
-* We're going to serve raw HTTP content with apache:
+* We're going to serve raw HTTP content with apache and configure dns with dnsmasq:
 ```
-sudo apt install apache2
+sudo apt install apache2 dnsmasq
 ```
 
 by default the contents of /var/www/html are available at http://10.0.0.1/.
@@ -82,9 +82,9 @@ From any of your clients, you should now see an index page with no contents if y
 
 ## Raw Content (https)
 
-* We're going to serve raw HTTPS content with apache:
+* We're going to serve raw HTTPS content with apache and configure DNS with dnsmasq:
 ```
-sudo apt install apache2
+sudo apt install apache2 dnsmasq
 ```
 
 * prepare apache to serve ssl content

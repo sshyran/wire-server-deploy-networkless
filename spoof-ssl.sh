@@ -30,8 +30,9 @@ function spoof_dns() {
 
 
 spoof_ssl raw.githubusercontent.com
-# TODO download all the things from github before spoofing DNS
-#spoof_dns raw.githubusercontent.com
+./download.sh
+# TODO ensure to download all the things from github before spoofing DNS
+spoof_dns raw.githubusercontent.com
 
 # restart apache and DNS
 sudo systemctl restart dnsmasq
