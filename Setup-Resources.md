@@ -263,6 +263,8 @@ echo "PACKAGES aptitude-r" > fai_config/package_config/poetry
 echo "python2.7 python-pip" >> fai_config/package_config/poetry
 echo "PACKAGES aptitude-r" > fai_config/package_config/emacs
 echo "emacs25-nox" >> fai_config/package_config/emacs
+echo "PACKAGES aptitude-r" > fai_config/package_config/ansible
+echo "sshpass" >> fai_config/package_config/ansible
 ```
 
 note that 'aptitude-r' downloads a package, it's dependencies, and all of the packages it recommends and their dependencies. 'aptitude' would just get a package and it's dependencies. aptitude-r seems to be the default behavior, in ubuntu.
@@ -345,9 +347,13 @@ export ORG=wireapp
 mkdir -p /home/wire/docker-squid4/docker-squid/$ORG
 ```
 
+* populate the repo:
 ```
+export ORG=wireapp
 export REPO=wireapp/wire-server-deploy.git
-git clone --bare https://github.com/wireapp/wire-server-deploy $REPO
+export REPOURI=https://github.com/wireapp/wire-server-deploy
+cd /home/wire/docker-squid4/docker-squid/$ORG
+git clone --bare $REPOURI $REPO
 mv $REPO/hooks/post-update.sample $REPO/hooks/post-update
 chmod a+x $REPO/hooks/post-update
 cd $REPO && git update-server-info
@@ -356,7 +362,8 @@ cd $REPO && git update-server-info
 #### Permissions
 * The owner of this directory and all of it's contents must be the user www-data, with the group www-data, so once you are done populating your content:
 ```
-sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/wireapp
+export ORG=wireapp
+sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/$ORG
 ```
 
 #### Making the content available to nodes:
@@ -378,7 +385,7 @@ Or, if you trust my sed:
 export DOMAINNAME=github.com
 export DIRNAME=wireapp
 export TARGETDIR=/home/wire/docker-squid4/docker-squid/wireapp
-sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
 ```
 
 * restart apache for changes to take effect.
@@ -386,5 +393,111 @@ sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGET
 sudo service apache2 restart
 ```
 
+## building a pypi repo:
 
+https://pypi.org/simple/ contains a pypi repo. this repo contains python packages. In order to get a list of what packages we're going to place in the repo, we're going to need the 'poetry.lock' files from all of the things that are pulling from this repo. specifically:
+```
+https://raw.githubusercontent.com/wireapp/wire-server-deploy/master/ansible/poetry.lock
+```
 
+* create a directory, and store our first lock there.
+```
+mkdir -p /home/wire/docker-squid4/docker-squid/poetry_locks
+curl https://raw.githubusercontent.com/wireapp/wire-server-deploy/master/ansible/poetry.lock -o /home/wire/docker-squid4/docker-squid/poetry_locks/ansible.lock
+```
+
+* Create a script for making the pypi repo:
+```
+LOCKDIR=poetry_locks
+INDEXDIR=/home/wire/docker-squid4/docker-squid/pypi_repository/simple
+REPODIR=/home/wire/docker-squid4/docker-squid/pypi_repository/repo
+URLBASE="https://pypi.org/repo"
+mkdir -p $REPODIR
+for each in $(find $LOCKDIR -name *.lock -type f)
+do {
+    for target in $(cat $each | sed -n 's/^name = "\(.*\)"$/\1/p');
+    do {
+        target_md5s=$(cat $each | sed -n "s/^[\"]*$target[\"]* = \[/[/p")
+	hrefs=""
+	mkdir -p $INDEXDIR/$target
+	target="$(echo $target | tr '.' '-')"
+	echo '<html>' > $INDEXDIR/$target/index.html
+	echo '    <head>' >> $INDEXDIR/$target/index.html
+	for md5no in $(seq 1 `echo $target_md5s | jq '. | length'`)
+	do {
+	    md5=$(echo $target_md5s | jq .[$(($md5no-1))] | tr -d "\"")
+	    href=$(curl -L https://pypi.org/simple/$target/ 2>/dev/null | grep $md5 | sed "s=.*href.\"\([^\"]*\)#.*=\1=")
+	    hrefs="$hrefs$href"$'\n'
+	    filename=$(echo $href | sed "s=.*/==")
+	    curl -L $href -o $REPODIR/$filename 2>/dev/null
+	    echo "    <a href=\"$URLBASE/$filename#sha256=$md5\">$filename</a><br\>" >> $INDEXDIR/$target/index.html
+	} done
+	echo '    <\head>' >> $INDEXDIR/$target/index.html
+	echo '<\html>' >> $INDEXDIR/$target/index.html
+    } done
+} done
+```
+
+* Run this script, to populate your pypi repo.
+
+#### Permissions
+* The owner of this directory and all of it's contents must be the user www-data, with the group www-data, so once you are done populating your content:
+```
+sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/pypi_repository
+```
+
+#### Making the content available to nodes:
+
+Since there is already a site set up for pypi.org, we only need to add these directories to that site's definition. note that we need to add the 'simple' and 'repo' subdirectories seperately.
+
+Add the simple directory to apache, and assign it an alias. for this example, we're going to use an alias the same as the name we gave the directory.
+* Edit /etc/apache2/sites-available/000-$DOMAINNAME.conf as root, and add:
+```
+alias /simple /home/wire/docker-squid4/docker-squid/pypi_repository/simple
+<Directory /home/wire/docker-squid4/docker-squid/pypi_repository/simple>
+     Options Indexes FollowSymLinks MultiViews
+     Require all granted
+</Directory>     
+```
+Right before the closing '</VirtualHost> tag.
+
+Also:
+Add the repo directory to apache, and assign it an alias. for this example, we're going to use an alias the same as the name we gave the directory.
+* Edit /etc/apache2/sites-available/000-$DOMAINNAME.conf as root, and add:
+```
+alias /repo /home/wire/docker-squid4/docker-squid/pypi_repository/repo
+<Directory /home/wire/docker-squid4/docker-squid/pypi_repository/repo>
+     Options Indexes FollowSymLinks MultiViews
+     Require all granted
+</Directory>     
+```
+Right before the closing '</VirtualHost> tag.
+
+Or, if you trust my sed:
+```
+export DOMAINNAME=pypi.org
+export DIRNAME=simple
+export TARGETDIR=/home/wire/docker-squid4/docker-squid/pypi_repository/simple
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+export DIRNAME=repo
+export TARGETDIR=/home/wire/docker-squid4/docker-squid/pypi_repository/repo
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+```
+
+* restart apache for changes to take effect.
+```
+sudo service apache2 restart
+```
+
+## Kubespray:
+
+### Git Repo:
+Use the directions for 'Git Repository' above to mirror kubernetes:
+```
+https://github.com/kubernetes-sigs/kubespray.git
+```
+
+* restart apache for changes to take effect.
+```
+sudo service apache2 restart
+```

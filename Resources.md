@@ -153,16 +153,88 @@ https://github.com/sdispater/poetry/releases/download/0.12.17/poetry-0.12.17-lin
 The installation of poetry grabs content from raw.githubusercontent.com, pypi.org, and gets a poetry release from github.com.
 
 #### Downloading wire-server-deploy
-we then download the wire-server-deploy repo from github.
 
+we then download the wire-server-deploy repo from github.
+```
+https://github.com/wireapp/wire-server-deploy
 
 #### poetry install
-during 'poetry install', poetry appears to be getting a reference for what it should download from pypi.org/simple/... , then fetching the content by some sort of hash at files.pythonhosted.org/packages/ .
+during 'poetry install', poetry appears to be getting a reference for each package it wants to install from pypi.org/simple/<packagename>/ , then fetching the content by some sort of hash at files.pythonhosted.org/packages/ . It does this for the following list of packages:
+```
+six
+certifi
+chardet
+docutils
+idna
+jmespath
+python-dateutil
+urllib3
+botocore
+futures
+requests
+ansible
+hvac
+markupsafe
+s3transfer
+ansible-modules-hashivault
+boto
+boto3
+dnspython
+jinja2
+netaddr
+pbr
+pyyaml
+rpamel-yaml
+```
 
-]
+While it's doing that, it's also looking for an updated pip, which is not needed for a successful result.
+
 #### make download
 
-the 'make download' step first grabs a bunch of stuff using git, then has a different system it uses to speak to galaxy.ansible.com. it downloads tarballs over https from dl.k8s.io and storage.googreapis to get kubernetes itsself, then initializes a helm repo from kubernetes-charts.storage.googleapis.com/index.yaml.
+The 'make download' step uses a rule in a makefile, that is broken into three pieces:
+
+##### make download-kubespray
+```
+make download-kubespray
+```
+
+Downloads a tested version of the kubespray repository via git from:
+```
+https://github.com/kubernetes-sigs/kubespray.git
+```
+
+#####
+```
+https://github.com/elastic/ansible-elasticsearch
+https://github.com/ANXS/hosstname
+https://github.com/ANXS/apt
+https://github.com/geerlingguy/ansible-role-java
+https://github.com/geerlingguy/ansible-role-ntp
+https://github.com/wireapp/ansible-cassandra
+https://github.com/wireapp/ansible-minio
+https://github.com/wireapp/ansible-restund
+https://github.com/wireapp/ansible-tinc
+https://github.com/githubixx/ansible-role-kubectl
+https://github.com/andrewrothstein/ansible-kubernetes-helm
+https://github.com/cchurch/ansible-role-admin-users
+```
+
+then has a different system it uses to speak to galaxy.ansible.com. looks like some sort of indexing function
+then it uses the 'GALAXY REST API':
+```
+https://galaxy.ansible.com/api/
+https://galaxy.ansible.com/api/v1/roles
+```
+the 'roles' endpoing spits out a json of roles
+
+it uses this data to find the most recent version of ansible-unarchive-deps.
+next, it downloads:
+```
+https://github.com/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz
+```
+
+FIXME: too fuzzy:
+it downloads tarballs over https from dl.k8s.io and storage.googreapis to get kubernetes itsself, then initializes a helm repo from kubernetes-charts.storage.googleapis.com/index.yaml.
 
 ## Admin node, during 'Preparing to run ansible' of wire-server-deploy/ansible/README.md:
 
