@@ -187,7 +187,7 @@ pyyaml
 rpamel-yaml
 ```
 
-While it's doing that, it's also looking for an updated pip, which is not needed for a successful result.
+While it's doing that, it's also looking for an updated pip, which is not needed for a successful result, and can be safely ignored.
 
 #### make download
 
@@ -203,11 +203,15 @@ Downloads a tested version of the kubespray repository via git from:
 https://github.com/kubernetes-sigs/kubespray.git
 ```
 
-#####
+##### make download-ansible-roles
+This rule downloads ansible roles over git, and over the 'GALAXY REST API'.
+
+###### GIT
+The git repos that roles are downloaded from are:
 ```
-https://github.com/elastic/ansible-elasticsearch
-https://github.com/ANXS/hosstname
-https://github.com/ANXS/apt
+https://github.com/elastic/ansible-elasticsearch.git
+https://github.com/ANXS/hostname.git
+https://github.com/ANXS/apt.git
 https://github.com/geerlingguy/ansible-role-java
 https://github.com/geerlingguy/ansible-role-ntp
 https://github.com/wireapp/ansible-cassandra
@@ -219,22 +223,26 @@ https://github.com/andrewrothstein/ansible-kubernetes-helm
 https://github.com/cchurch/ansible-role-admin-users
 ```
 
-then has a different system it uses to speak to galaxy.ansible.com. looks like some sort of indexing function
-then it uses the 'GALAXY REST API':
+###### GALAXY REST API
+Then has a different system it uses to speak to galaxy.ansible.com. It uses the 'GALAXY REST API':
 ```
 https://galaxy.ansible.com/api/
-https://galaxy.ansible.com/api/v1/roles
+https://galaxy.ansible.com/api/v1/roles?name=unarchive-deps
 ```
-the 'roles' endpoing spits out a json of roles
+it uses this data to find the most recent version of unarchive-deps.
 
-it uses this data to find the most recent version of ansible-unarchive-deps.
-next, it downloads:
+Next, it downloads:
 ```
 https://github.com/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz
 ```
-
-FIXME: too fuzzy:
+##### Static Content:
 it downloads tarballs over https from dl.k8s.io and storage.googreapis to get kubernetes itsself, then initializes a helm repo from kubernetes-charts.storage.googleapis.com/index.yaml.
+```
+https://dl.k8s.io/v1.14.2/kubernetes-client-linux-amd64.tar.gz
+```
+
+##### APT Content:
+It insures that python-apt , unzip, gzip, bzip2, tar, and xz-utils are installed via apt at this stage.
 
 ## Admin node, during 'Preparing to run ansible' of wire-server-deploy/ansible/README.md:
 
@@ -263,6 +271,10 @@ emacs25-nox
 Style: APT
 
 During this step, we install sshpass, so that ansible can use passwords to log in and become root on the kubernetes/ansible nodes.
+
+#### Optional Steps
+
+Here, we check out wire-server-deploy-networkless, in order to run the ansible script located there, to copy our ca certificate to all of the nodes.
 
 ### Kubernetes nodes, during kubespray.
 
@@ -293,6 +305,7 @@ python-httplib2
 ipvsadm
 socat
 ```
+
 It adds a GPG key and an apt entry for docker's apt repository.
 ```
 https://download.docker.com/linux/ubuntu/gpg
@@ -304,7 +317,7 @@ http://archive.ubuntu.com/ubuntu/dists/bionic-security/InRelease
 https://download.docker.com/linux/ubuntu/dists/bionic/stable/binary-amd64/Packages.bz2
 ```
 
-Then performs an apt update, and downloads the following packages:
+Then performs an apt update, and downloads the following packages from docker's apt repository:
 ```
 pigz
 cgroupfs-mount
@@ -313,6 +326,8 @@ containerd.io
 docker-ce-cli
 docker-ce
 ```
+
+Note that the version of docker-ce is version locked, and is not the newest available in the repository.
 
 #### Docker pulls
 Style: docker-pull
@@ -330,7 +345,6 @@ The install downloads the kubeadm binary from:
 ```
 https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/kubeadm
 ```
-
 
 #### Another docker pull
 Style: Docker-pull
