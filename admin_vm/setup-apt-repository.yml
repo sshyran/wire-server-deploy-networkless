@@ -1,0 +1,28 @@
+---
+
+- hosts: all
+  vars:
+    offline_sources: "/etc/apt/sources.list.d/apt_wire_com.list"
+    offline_url: "http://apt.wire.com/apt/"
+    offline_repo_name: "bionic"
+  tasks:
+    - name: stat /etc/apt/sources.list
+      stat: path=/etc/apt/sources.list
+      register: sources_stat
+
+    - name: move global sources.list out of the way
+      command: mv /etc/apt/sources.list /etc/apt/sources.list.online
+      when: sources_stat.stat.exists
+
+    - name: add offline apt repository
+      copy:
+        dest: "{{ offline_sources }}"
+        content: 'deb [trusted=yes] {{ offline_url }} {{ offline_repo_name }} stable'
+
+    - name: insecurely access apt repositories
+      copy:
+        dest: "/etc/apt/apt.conf.d/99insecure"
+        content: 'Acquire::AllowInsecureRepositories "true";'
+        
+    - name: update apt
+      shell: apt-get update
