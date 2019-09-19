@@ -141,9 +141,10 @@ If you had to make either of these two changes, or had to copy the system certif
 * Create a certificate for our target site, and sign it with our wire.com ssl certificate:
 ```
 export DOMAINNAME=raw.githubusercontent.com
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
 sudo openssl genrsa -out /etc/ssl/private/$DOMAINNAME.key 2048
-sudo openssl req -new -key /etc/ssl/private/$DOMAINNAME.key -out /home/wire/docker-squid4/docker-squid/$DOMAINNAME.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN=$DOMAINNAME"
-sudo openssl x509 -req -in /home/wire/docker-squid4/docker-squid/$DOMAINNAME.csr -CA /home/wire/docker-squid4/mk-ca-cert/certs/wire.com.crt -CAkey /home/wire/docker-squid4/mk-ca-cert/certs/private.pem -CAcreateserial -out /etc/ssl/certs/$DOMAINNAME.pem -days 500 -sha256
+sudo openssl req -new -key /etc/ssl/private/$DOMAINNAME.key -out $CONTENTHOME/$DOMAINNAME.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN=$DOMAINNAME"
+sudo openssl x509 -req -in $CONTENTHOME/$DOMAINNAME.csr -CA /home/wire/docker-squid4/mk-ca-cert/certs/wire.com.crt -CAkey /home/wire/docker-squid4/mk-ca-cert/certs/private.pem -CAcreateserial -out /etc/ssl/certs/$DOMAINNAME.pem -days 500 -sha256
 ```
 
 * copy the default apache ssl configuration to a new name.
@@ -179,7 +180,7 @@ At this point, the content of /var/www/html are available at https://raw.githubu
 mkdir -p /home/wire/docker-squid4/docker-squid/sdispater/poetry/master
 ```
 
-#### Content population
+#### Content Population
 If you haven't already, populate your new directory with the content you want to serve. for this example:
 ```
 curl https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py -o /home/wire/docker-squid4/docker-squid/sdispater/poetry/master/get-poetry.py
@@ -207,10 +208,11 @@ Right before the closing '</VirtualHost> tag.
 
 Or, if you trust my sed:
 ```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
 export DOMAINNAME=raw.githubusercontent.com
 export DIRNAME=sdispater
-export TARGETDIR=/home/wire/docker-squid4/docker-squid/sdispater
-sudo sed -i "s=\(</VirtualHost>\)=ServerName $DOMAINNAME\nHostnameLookups Off\nalias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+export TARGETDIR=$CONTENTHOME/sdispater
+sudo sed -i "s=\(</VirtualHost>\)=ServerName $DOMAINNAME\nHostnameLookups Off\nalias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
 ```
 
 * restart apache for changes to take effect.
@@ -252,8 +254,14 @@ mkdir -p fai_etc/apt/
 touch fai_etc/fai.conf
 echo 'FAI_DEBOOTSTRAP="bionic http://archive.ubuntu.com/ubuntu"' > fai_etc/nfsroot.conf
 echo 'FAI_CONFIGDIR=/home/wire/docker-squid4/docker-squid/fai_config' >> fai_etc/nfsroot.conf
-sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 3B4FE6ACC0B21F32
 cp /etc/apt/sources.list fai_etc/apt/sources.list
+echo "deb https://download.docker.com/linux/ubuntu/dists/ bionic stable"
+```
+
+* Add the GPG keys for the repos we're going to pull content from:
+```
+sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 3B4FE6ACC0B21F32
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add –
 ```
 
 * Select what you want in the repo:
@@ -265,16 +273,31 @@ echo "PACKAGES aptitude-r" > fai_config/package_config/emacs
 echo "emacs25-nox" >> fai_config/package_config/emacs
 echo "PACKAGES aptitude-r" > fai_config/package_config/ansible
 echo "sshpass" >> fai_config/package_config/ansible
+echo "PACKAGES aptitude-r" > fai_config/package_config/unarchive-deps
+echo "python-apt" >> fai_config/package_config/unarchive-deps
+echo "PACKAGES aptitude-r" > fai_config/package_config/kubernetes
+echo "aufs-tools python-httplib2 socat unzip ipvsadm" >> fai_config/package_config/kubernetes
+echo "pigz cgroupfs-mount libltdl7 containerd.io docker-ce-cli docker-ce" >> fai_config/package_config/kubernetes
 ```
 
-note that 'aptitude-r' downloads a package, it's dependencies, and all of the packages it recommends and their dependencies. 'aptitude' would just get a package and it's dependencies. aptitude-r seems to be the default behavior, in ubuntu.
+Note that 'aptitude-r' downloads a package, it's dependencies, and all of the packages it recommends and their dependencies. 'aptitude' would just get a package and it's dependencies. aptitude-r seems to be the default behavior, in ubuntu.
 
+* Force the fai-mirror tool to create a mirror named 'bionic', with a 'stable' component.
+```
+export DISTRO=bionic
+export COMPONENT=stable
+sudo sed -i "s/Codename: .*/Codename: $DISTRO/" /usr/bin/fai-mirror
+sudo sed -i "s/Components: .*/Components: $COMPONENT/" /usr/bin/fai-mirror
+sudo sed -i "s/includedeb [^ ]*/includedeb $DISTRO/" /usr/bin/fai-mirror
+
+```
 
 * (re)build the repo:
 ```
 sudo rm -rf apt_repository
 mkdir -p apt_repository/aptcache/etc/apt/
 cp -a /etc/apt/trusted.gpg.d/ apt_repository/aptcache/etc/apt/
+cp -a /etc/apt/trusted.gpg apt_repository/aptcache/etc/apt/
 fai-mirror -v -b -C fai_etc /home/wire/docker-squid4/docker-squid/apt_repository
 sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/apt_repository
 
@@ -287,9 +310,12 @@ Your repository is now a directory, so use the 'Raw Content' steps above to serv
 After you've done that, running 'curl apt.wire.com/apt_repository/' on the admin node should show the contents of the apt repo.
 
 #### Add the repo to your target system:
+
+On each node in your cluster (kubernetes and non-kubernetes), move the original sources.list out of the way, and add a one line repository definition for this repo. afterward, disable gpg integrety checks for all repos, and run apt update.
 ```
 sudo mv /etc/apt/sources.list /etc/apt/sources.list.online
-sudo bash -c 'echo "deb [trusted=yes] http://apt.wire.com/apt_repository/ cskoeln main" >> /etc/apt/sources.list.d/apt.wire.com.sources.list'
+sudo bash -c 'echo "deb http://apt.wire.com/apt/ bionic stable" >> /etc/apt/sources.list.d/apt.wire.com.sources.list'
+sudo bash -c 'echo "Acquire::AllowInsecureRepositories \"true\"" >> /etc/apt/apt.conf.d/99insecure'
 sudo apt update
 ```
 
@@ -349,21 +375,24 @@ mkdir -p /home/wire/docker-squid4/docker-squid/$ORG
 
 * populate the repo:
 ```
-export ORG=wireapp
-export REPO=wireapp/wire-server-deploy.git
-export REPOURI=https://github.com/wireapp/wire-server-deploy
-cd /home/wire/docker-squid4/docker-squid/$ORG
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=github.com
+
+# expects CONTENTHOME, DOMAINNAME, ORG, and REPO
+function clone_git_repo {
+export REPOURI=https://$DOMAINNAME/$REPO
+mkdir -p $CONTENTHOME/$ORG
 git clone --bare $REPOURI $REPO
 mv $REPO/hooks/post-update.sample $REPO/hooks/post-update
 chmod a+x $REPO/hooks/post-update
 cd $REPO && git update-server-info
-```
+cd $CONTENTHOME
+}
 
-#### Permissions
-* The owner of this directory and all of it's contents must be the user www-data, with the group www-data, so once you are done populating your content:
-```
 export ORG=wireapp
-sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/$ORG
+export REPO=$ORG/wire-server-deploy
+
+clone_git_repo
 ```
 
 #### Making the content available to nodes:
@@ -382,11 +411,29 @@ Right before the closing '</VirtualHost> tag.
 
 Or, if you trust my sed:
 ```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
 export DOMAINNAME=github.com
-export DIRNAME=wireapp
-export TARGETDIR=/home/wire/docker-squid4/docker-squid/wireapp
+export ORG=wireapp
+
+# expects CONTENTHOME, DOMAINNAME, and ORG.
+function add_git_org {
+export DIRNAME=$ORG
+export TARGETDIR=$CONTENTHOME/$ORG
 sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+sudo chown -R www-data.www-data $CONTENTHOME/$ORG
+}
+
+add_git_org
 ```
+
+#### Permissions
+* The owner of this directory and all of it's contents must be the user www-data, with the group www-data, so once you are done populating your content:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export ORG=wireapp
+sudo chown -R www-data.www-data $CONTENTHOME/$ORG
+```
+#### Restart Apache
 
 * restart apache for changes to take effect.
 ```
@@ -489,10 +536,14 @@ sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGET
 sudo service apache2 restart
 ```
 
-## Kubespray:
 
-### Git Repo:
-Use the directions for 'Git Repository' above to mirror kubernetes:
+## make download
+the make download step uses three rules in the makefile. we're going to prepare for each of them separately:
+
+### make download-kubespray:
+the 'download-kubespray' rule just needs a git repo set up, so it can grab kubespray.
+
+* Use the directions for 'Git Repository' above to mirror kubernetes:
 ```
 https://github.com/kubernetes-sigs/kubespray.git
 ```
@@ -501,3 +552,207 @@ https://github.com/kubernetes-sigs/kubespray.git
 ```
 sudo service apache2 restart
 ```
+
+### make download-ansible-roles:
+
+#### Git
+Almost all of these roles are pulled from git. be prepared to make a lot of git mirrors:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=github.com
+
+# expects CONTENTHOME, DOMAINNAME, ORG, and REPO
+function clone_git_repo {
+export REPOURI=https://$DOMAINNAME/$REPO
+mkdir -p $CONTENTHOME/$ORG
+git clone --bare $REPOURI $REPO
+mv $REPO/hooks/post-update.sample $REPO/hooks/post-update
+chmod a+x $REPO/hooks/post-update
+cd $REPO && git update-server-info
+cd $CONTENTHOME
+}
+
+# expects CONTENTHOME, DOMAINNAME, and ORG.
+function add_git_org {
+export DIRNAME=$ORG
+export TARGETDIR=$CONTENTHOME/$ORG
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+sudo chown -R www-data.www-data $CONTENTHOME/$ORG
+}
+
+export ORG=elastic
+export REPO=$ORG/ansible-elasticsearch.git
+clone_git_repo
+
+add_git_org
+
+export ORG=ANXS
+export REPO=$ORG/hostname.git
+clone_git_repo
+export REPO=$ORG/apt.git
+clone_git_repo
+
+add_git_org
+
+export ORG=geerlingguy
+export REPO=$ORG/ansible-role-java.git
+clone_git_repo
+export REPO=$ORG/ansible-role-ntp.git
+clone_git_repo
+
+add_git_org
+
+sudo chown -R wire.wire wireapp
+export ORG=wireapp
+export REPO=$ORG/ansible-cassandra.git
+clone_git_repo
+export REPO=$ORG/ansible-minio.git
+clone_git_repo
+export REPO=$ORG/ansible-restund.git
+clone_git_repo
+export REPO=$ORG/ansible-tinc.git
+clone_git_repo
+sudo chown -R www-data.www-data $ORG
+
+export ORG=githubixx
+export REPO=$ORG/ansible-role-kubectl.git
+clone_git_repo
+add_git_org
+
+export ORG=andrewrothstein
+export REPO=$ORG/ansible-kubernetes-helm.git
+clone_git_repo
+add_git_org
+
+export ORG=cchurch
+export REPO=$ORG/ansible-role-admin-users.git
+clone_git_repo
+add_git_org
+```
+
+... simple, right?
+
+##### Restart Apache
+
+* restart apache for changes to take effect.
+```
+sudo service apache2 restart
+```
+
+#### Galaxy Repo
+This Makefile rule uses the ansible Galaxy V1 API to request the latest version of the 'unarchive-deps' role.
+
+* Create a directory for containing our Galaxy repo:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+mkdir -p $CONTENTHOME/galaxy_repository/api
+```
+
+* Follow the directions in 'Raw Content (https)/Making a Directory available to clients' to create a fake galaxy.ansible.com. Skip the 'Content Population' and 'Permissions' portion. Point the website to $CONTENTHOME/galaxy_repository.
+
+
+The galaxy rest API stores a definition of it's server version, and protocol version in /api/.
+* Make the repo look like it's speaking galaxy API version 1:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export REPOPATH=$CONTENTHOME/galaxy_repository/api/
+echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $repopath/index.html
+```
+
+The next endpoint we have to serve is /api/v1/roles. you can query for a specific role by name:
+```
+curl -L 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps'> unarchive-deps.json
+```
+
+For the time being, we're going to save this index unmodified, so that the single package 'unarchive-deps' will be served from this repo.
+
+* Save the result of searching for unarchive-deps into api/v1/roles/
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export REPOPATH=$CONTENTHOME/galaxy_repository/api/
+mkdir -p $REPOPATH/v1/roles
+curl -L 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps' > $REPOPATH/v1/roles/index.html
+```
+
+Add the most recent unarchive-deps to our fake-github entry for andrewrothstein.
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+sudo chown -R wire.wire $CONTENTHOME/andrewrothstein
+mkdir -p $CONTENTHOME/andrewrothstein/ansible-unarchive-deps/archive/
+curl -L https://github.com/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz -o $CONTENTHOME/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz
+sudo chown -R www-data.www-data $CONTENTHOME/andrewrothstein
+```
+
+#### make download-cli-binaries:
+
+* Create a directory for holding our kubernetes client:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+mkdir -p $CONTENTHOME/kubernetes_client/v1.14.2/
+```
+
+* Follow the directions in 'Raw Content (https)/Making a Directory available to clients' to create a fake dl.k8s.io. Skip the 'Directory creation', 'Content Population' and 'Permissions' portion. Point the website to $CONTENTHOME/kubernetes_client.
+
+* Download kuburnetes client v1.14.2, and place it where it will be served:
+
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+curl -L https://dl.k8s.io/v1.14.2/kubernetes-client-linux-amd64.tar.gz -o $CONTENTHOME/kubernetes_client/v1.14.2/kubernetes-client-linux-amd64.tar.gz
+```
+
+* Change the permissions so this can be served by apache:
+```
+sudo chown -R www-data.www-data $CONTENTHOME/kubernetes_client/
+```
+
+#### ansible pre-kubernetes
+
+In our squid configuration, we use an ansible script in the wire-server-deploy-networkless git repo to copy our CA certificate to all of the nodes.
+
+* Add the wire-server-deploy-networkless get repo to our wireapp organization:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=github.com
+
+# expects CONTENTHOME, DOMAINNAME, ORG, and REPO
+function clone_git_repo {
+export REPOURI=https://$DOMAINNAME/$REPO
+mkdir -p $CONTENTHOME/$ORG
+git clone --bare $REPOURI $REPO
+mv $REPO/hooks/post-update.sample $REPO/hooks/post-update
+chmod a+x $REPO/hooks/post-update
+cd $REPO && git update-server-info
+cd $CONTENTHOME
+}
+
+sudo chown -R wire.wire wireapp
+export ORG=wireapp
+export REPO=$ORG/wire-server-deploy-networkless.git
+clone_git_repo
+sudo chown -R www-data.www-data $ORG
+```
+
+#### download.docker.com
+
+* Follow the directions in 'Raw Content (https)/Making a Directory available to clients' to create a fake download.docker.com. Skip the 'Directory creation', 'Content Population' and 'Permissions' portion. Point the website's linux/ubuntu/ to $CONTENTHOME/apt_repository.
+
+* copy download.docker.com's gpg key into place in the repository:
+```
+curl https://download.docker.com/linux/ubuntu/gpg -o apt_repository/gpg
+sudo chown -R www-data.www-data ubuntu 
+```
+
+#### more githubusercontent:
+
+* add an alias for raw.githubusercontent.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/ to $CONTENTHOME/kubernetes
+
+```
+mkdir kubernetes
+curl https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/kubeadm -o kubernetes/kubeadm
+curl https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/hyperkube -o kubernetes/hyperkube
+sudo chown -R www-data.www-data kubernetes
+
+```
+
+
+
