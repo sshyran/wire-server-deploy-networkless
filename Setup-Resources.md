@@ -138,6 +138,9 @@ If you had to make either of these two changes, or had to copy the system certif
 
 ### Making a directory available to clients:
 
+
+#### Creating Certificates
+
 * Create a certificate for our target site, and sign it with our wire.com ssl certificate:
 ```
 export DOMAINNAME=raw.githubusercontent.com
@@ -147,6 +150,7 @@ sudo openssl req -new -key /etc/ssl/private/$DOMAINNAME.key -out $CONTENTHOME/$D
 sudo openssl x509 -req -in $CONTENTHOME/$DOMAINNAME.csr -CA /home/wire/docker-squid4/mk-ca-cert/certs/wire.com.crt -CAkey /home/wire/docker-squid4/mk-ca-cert/certs/private.pem -CAcreateserial -out /etc/ssl/certs/$DOMAINNAME.pem -days 500 -sha256
 ```
 
+#### Creating an Apache Configuration
 * copy the default apache ssl configuration to a new name.
 ```
 export DOMAINNAME=raw.githubusercontent.com
@@ -536,6 +540,66 @@ sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGET
 sudo service apache2 restart
 ```
 
+## Docker Registry:
+
+### Setting up the registry
+change the /root/sbin/iptables script to allow port 22 inbound, and re-run it.
+
+use the ansible 'registry.yml' playbook to set up the registry.
+
+edit the startup script, and change the port to 5001
+
+### Enabling apache proxying:
+Apache's proxying functionality is used to forward client requests for the registry to the registry.
+
+* Enable apache proxying:
+```
+sudo a2enmod proxy
+sudo a2enmod proxy_http
+sudo service apache2 restart
+```
+
+### Setup an apache forward to the registry:
+
+Follow the directions in 'Raw Content (https)/Making a directory available to clients/Creating Certificates' to create fake certificates for this domain.
+
+Follow the directions in 'Raw Content (https)/DNSMASQ configuration' to create a fake domain.
+
+* Create an apache configuration for your fake domain in /etc/apache2/sites-available/000-$DOMAINNAME.conf . for example, for k8s.gcr.io:
+```
+<VirtualHost _default_:443>
+    ServerName k8s.gcr.io
+
+    <Proxy *>
+        Order deny,allow
+        Allow from all
+    </Proxy>
+
+    SSLEngine on
+    SSLProxyEngine On
+    SSLCertificateFile /etc/ssl/certs/k8s.gcr.io.pem
+    SSLCertificateKeyFile /etc/ssl/private/k8s.gcr.io.key
+
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass / https://localhost:5001/
+    ProxyPassReverse / https://localhost:5001/
+</VirtualHost>
+```
+
+* Enable the site, and restart apache.
+```
+sudo a2ensite 000-k8s.gcr.io
+sudo service apache2 restart
+```
+
+### Adding an image to the registry:
+
+* To add an image to our docker registry, run the 'upload_image.sh' script in $CONTENTHOME/docker_registry/opt/registry. For example, to upload k8s.gcr.io's cluster-proportional-autoscaler-amd64:1.4.0:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid
+$CONTENTHOME/docker_registry/opt/registry/upload_image.sh k8s.gcr.io cluster-proportional-autoscaler-amd64:1.4.0
+```
 
 ## make download
 the make download step uses three rules in the makefile. we're going to prepare for each of them separately:
@@ -551,6 +615,50 @@ https://github.com/kubernetes-sigs/kubespray.git
 * restart apache for changes to take effect.
 ```
 sudo service apache2 restart
+```
+
+## Galaxy Repo
+This Makefile rule uses the ansible Galaxy V1 API to request the latest version of the 'unarchive-deps' role.
+
+* Create a directory for containing our Galaxy repo:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+mkdir -p $CONTENTHOME/galaxy_repository/api
+```
+
+* Follow the directions in 'Raw Content (https)/Making a Directory available to clients' to create a fake galaxy.ansible.com. Skip the 'Content Population' and 'Permissions' portion. Point the website to $CONTENTHOME/galaxy_repository.
+
+
+The galaxy rest API stores a definition of it's server version, and protocol version in /api/.
+* Make the repo look like it's speaking galaxy API version 1:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export REPOPATH=$CONTENTHOME/galaxy_repository/api/
+echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $repopath/index.html
+```
+
+The next endpoint we have to serve is /api/v1/roles. you can query for a specific role by name:
+```
+curl -L 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps'> unarchive-deps.json
+```
+
+For the time being, we're going to save this index unmodified, so that the single package 'unarchive-deps' will be served from this repo.
+
+* Save the result of searching for unarchive-deps into api/v1/roles/
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export REPOPATH=$CONTENTHOME/galaxy_repository/api/
+mkdir -p $REPOPATH/v1/roles
+curl -L 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps' > $REPOPATH/v1/roles/index.html
+```
+
+Add the most recent unarchive-deps to our fake-github entry for andrewrothstein.
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+sudo chown -R wire.wire $CONTENTHOME/andrewrothstein
+mkdir -p $CONTENTHOME/andrewrothstein/ansible-unarchive-deps/archive/
+curl -L https://github.com/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz -o $CONTENTHOME/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz
+sudo chown -R www-data.www-data $CONTENTHOME/andrewrothstein
 ```
 
 ### make download-ansible-roles:
@@ -639,50 +747,6 @@ add_git_org
 sudo service apache2 restart
 ```
 
-#### Galaxy Repo
-This Makefile rule uses the ansible Galaxy V1 API to request the latest version of the 'unarchive-deps' role.
-
-* Create a directory for containing our Galaxy repo:
-```
-export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
-mkdir -p $CONTENTHOME/galaxy_repository/api
-```
-
-* Follow the directions in 'Raw Content (https)/Making a Directory available to clients' to create a fake galaxy.ansible.com. Skip the 'Content Population' and 'Permissions' portion. Point the website to $CONTENTHOME/galaxy_repository.
-
-
-The galaxy rest API stores a definition of it's server version, and protocol version in /api/.
-* Make the repo look like it's speaking galaxy API version 1:
-```
-export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
-export REPOPATH=$CONTENTHOME/galaxy_repository/api/
-echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $repopath/index.html
-```
-
-The next endpoint we have to serve is /api/v1/roles. you can query for a specific role by name:
-```
-curl -L 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps'> unarchive-deps.json
-```
-
-For the time being, we're going to save this index unmodified, so that the single package 'unarchive-deps' will be served from this repo.
-
-* Save the result of searching for unarchive-deps into api/v1/roles/
-```
-export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
-export REPOPATH=$CONTENTHOME/galaxy_repository/api/
-mkdir -p $REPOPATH/v1/roles
-curl -L 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps' > $REPOPATH/v1/roles/index.html
-```
-
-Add the most recent unarchive-deps to our fake-github entry for andrewrothstein.
-```
-export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
-sudo chown -R wire.wire $CONTENTHOME/andrewrothstein
-mkdir -p $CONTENTHOME/andrewrothstein/ansible-unarchive-deps/archive/
-curl -L https://github.com/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz -o $CONTENTHOME/andrewrothstein/ansible-unarchive-deps/archive/v1.0.12.tar.gz
-sudo chown -R www-data.www-data $CONTENTHOME/andrewrothstein
-```
-
 #### make download-cli-binaries:
 
 * Create a directory for holding our kubernetes client:
@@ -742,17 +806,96 @@ curl https://download.docker.com/linux/ubuntu/gpg -o apt_repository/gpg
 sudo chown -R www-data.www-data ubuntu 
 ```
 
-#### more githubusercontent:
+#### more static content:
 
-* add an alias for raw.githubusercontent.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/ to $CONTENTHOME/kubernetes
+set up the storage.googleapis.com domain.
 
 ```
 mkdir kubernetes
 curl https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/kubeadm -o kubernetes/kubeadm
 curl https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/hyperkube -o kubernetes/hyperkube
 sudo chown -R www-data.www-data kubernetes
+```
 
+Create a directory for containernetworking's plugins.
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=github.com
+mkdir $CONTENTHOME/containernetworking
+```
+
+Add an alias and a directory entry to /etc/apache2/sites-available/000-github.com.conf , pointing containernetworking/plugins/releases/download/v0.6.0 to $CONTENTHOME/containernetworking
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=github.com
+export DIRNAME=containernetworking/plugins/releases/download/v0.6.0
+export TARGETDIR=$CONTENTHOME/containernetworking
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+```
+
+Add the content:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+curl -L https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz -o $CONTENTHOME/containernetworking/cni-plugins-amd64-v0.6.0.tgz
+```
+
+Fix the permissions so apache can serve it:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+sudo chown -R www-data.www-data $CONTENTHOME/containernetworking/
 ```
 
 
+#### preparing for kubernetes deploy:
 
+Follow the instructions in 'Docker Registry/Setting up the registry' and 'Docker Registry/Enabling apache proxying' to deploy a docker registry.
+
+Follow the instructions in 'Docker Registry/Setup an Apache forward to the registry' to set up forwarding entries for our registry for the following domains:
+```
+k8s.gcr.io
+gcr.io
+quay.io
+docker.io
+registry-1.docker.io
+```
+
+Note that docker.io is registry-1.docker.io is dns... but the image name does not contain the first component of the name? just add them both.
+
+Follow the instructions in 'Docker Registry/Adding an image to the registry' to add the following images to the registry:
+```
+k8s.gcr.io / cluster-proportional-autoscaler-amd64:1.4.0
+gcr.io / google_containers/pause-amd64:3.1
+quay.io / coreos/etcd:v3.2.26
+docker.io / lachlanevenson/k8s-helm:v2.13.1
+docker.io / rancher/local-path-provisioner:v0.0.2
+quay.io / coreos/flannel-cni:v0.3.0
+docker.io / library/nginx:1.15
+gcr.io / kubernetes-helm/tiller:v2.13.1
+quay.io / coreos/flannel:v0.11.0
+gcr.io / google_containers/kubernetes-dashboard-amd64:v1.10.1
+quay.io / external_storage/local-volume-provisioner:v2.1.0
+quay.io / calico/kube-controllers:v3.4.0
+k8s.gcr.io / k8s-dns-node-cache:1.15.1
+docker.io / coredns/coredns:1.5.0
+gcr.io / google-containers/kube-apiserver:v1.14.2
+
+```
+
+Download the last two release files, and add an alias for serving them:
+
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=dl.k8s.io
+sudo mkdir -p $CONTENTHOME/kubernetes_client/release
+sudo curl -L https://dl.k8s.io/release/table-1.txt -o kubernetes_client/release/stable-1.txt
+sudo curl -L https://dl.k8s.io/release/table-1.14.txt -o kubernetes_client/release/stable-1.14.txt
+export DOMAINNAME=dl.k8s.io
+export DIRNAME=release
+export TARGETDIR=$CONTENTHOME/kubernetes_client/release
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+```
+
+Restart apache for the change to go into effect:
+```
+sudo service apache2 restart
+```
