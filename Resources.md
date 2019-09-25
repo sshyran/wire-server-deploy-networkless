@@ -333,10 +333,10 @@ Note that the version of docker-ce is version locked, and is not the newest avai
 Style: docker-pull
 At this point, it downloads some docker images via 'docker pull'. they are:
 ```
-cluster-proportional-autoscaler-amd64/manifests/1.4.0
-google_containers/pause-amd64/manifests/3.1
-coreos/etcd/manifests/v3.2.26
-lachlanevenson/k8s-helm/manifests/v2.13.1
+k8s.gcr.io / cluster-proportional-autoscaler-amd64:1.4.0
+gcr.io / google_containers/pause-amd64:3.1
+quay.io / coreos/etcd:v3.2.26
+docker.io / lachlanevenson/k8s-helm:v2.13.1
 ```
 
 #### kubeadm
@@ -350,7 +350,7 @@ https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd6
 Style: Docker-pull
 The installer downloads the local-path-provisioner docker image.
 ```
-rancher/local-path-provisioner/manifests/v0.0.2
+docker.io / rancher/local-path-provisioner:v0.0.2
 
 ```
 
@@ -366,14 +366,14 @@ Style: Docker-pull
 
 The installation continues with more docker pulls, for:
 ```
-coreos/flannel-cni/manifests/v0.3.0
-library/nginx/manifests/1.15
-kubernetes-helm/tiller/manifests/v2.13.1
-coreos/flannel/manifests/v0.11.0
-google_containers/kubernetes-dashboard-amd64/manifests/v1.10.1
-external_storage/local-volume-provisioner/manifests/v2.1.0
-calico/kube-controllers/manifests/v3.4.0
-k8s-dns-node-cache/manifests/1.15.1
+quay.io / coreos/flannel-cni:v0.3.0
+docker.io / library/nginx:1.15
+gcr.io / kubernetes-helm/tiller:v2.13.1
+quay.io / coreos/flannel:v0.11.0
+gcr.io / google_containers/kubernetes-dashboard-amd64:v1.10.1
+quay.io / external_storage/local-volume-provisioner:v2.1.0
+quay.io / calico/kube-controllers:v3.4.0
+k8s.gcr.io / k8s-dns-node-cache:1.15.1
 ```
 
 #### container networking
@@ -389,13 +389,13 @@ Style: Docker-pull
 
 One last batch of docker containers is downloaded during the install:
 ```
-coredns/coredns/manifests/1.5.0
-google-containers/kube-apiserver/manifests/v1.14.2
-google-containers/kube-controller-manager/manifests/v1.14.2
-google-containers/kube-scheduler/manifests/v1.14.2
-google-containers/kube-proxy/manifests/v1.14.2
-google-containers/pause/manifests/3.1
-google-containers/coredns/manifests/1.3.1
+docker.io / coredns/coredns:1.5.0
+gcr.io / google-containers/kube-apiserver:v1.14.2
+gcr.io / google-containers/kube-controller-manager:v1.14.2
+gcr.io / google-containers/kube-scheduler:v1.14.2
+gcr.io / google-containers/kube-proxy:v1.14.2
+gcr.io / google-containers/pause:3.1
+gcr.io / google-containers/coredns:1.3.1
 ```
 
 #### Release identifiers:
