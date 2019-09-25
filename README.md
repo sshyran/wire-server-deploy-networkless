@@ -120,10 +120,13 @@ sudo cp etc/dnsmasq.d/proxybox.conf /etc/dnsmasq.d/
             addresses:
               -  10.0.0.1/24
 ```
-sudo netplan apply
-```
+Note: Be careful about tabs vs spaces. if your editor uses tabs, netplan will complain, and not work.
+
 * Restart networking:
 ```
+sudo netplan apply
+```
+
 ##### Ubuntu 16
 * Edit /etc/network/interfaces, and set the interface we are going to be listening on to use the fixed address 10.0.0.1. for example, if we are using the ethernet interface 'ens4':
 ```
@@ -195,10 +198,15 @@ curl -v -x 10.0.0.1:3128 --cacert local_mitm.pem https://wire.com/en/
 curl -v http://wire.com/en/
 ```
 
-### setting up an admin node:
+### setting up an admin node, the ansible nodes, and kubernetes nodes:
 
 The admin node is the machine we're going to perform administrative tasks with. This includes both setting up our kubernetes cluster, and setting up non-kubernetes services via ansible.
+Kubernetes nodes are the nodes we're going to run kubernetes, and all of the kubernetes compatible services on. think: everything that does not require state.
+Ansible nodes are nodes we are going to install stateful services on: cassandra, minio, etc.
 
+Our post-ubuntu-install procedure for each one of these nodes is the same: apply security updates, add our SSL certificate, and remove a warning in the login banner.
+
+Follow this procedure 7 times: once for your 'admin' node, once for kubenode[1-3], and once for ansnode[1-3].
 
 #### Ubuntu 18
 * Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.3-live-server-amd64.iso)
@@ -207,71 +215,65 @@ The admin node is the machine we're going to perform administrative tasks with. 
 #### Ubuntu 16
 * Install [ubuntu 16 server](http://releases.ubuntu.com/16.04/ubuntu-16.04.6-server-amd64.iso)
 
+#### Post-Installation security updates:
+* After installing, make sure you perform security updates:
+```
+sudo apt update
+sudo apt dist-upgrade
+sudo reboot
+```
+
 #### Adding CA Cert:
 
-* Add local ca cert to admin:
+* Add our local ca certificate to the target machine:
 ```sh
 sudo mkdir -p /usr/local/share/ca-certificates/wire.com/
 ```
   * from proxybox, in the location you checked out the docker-squid4 repo:
 ```sh
-scp docker-squid4/mk-ca-cert/certs/wire.com.crt $USERNAME@$ADMIN_PC_IP:/home/$USERNAME/
+scp docker-squid4/mk-ca-cert/certs/wire.com.crt $USERNAME@$IP:/home/$USERNAME/
 ```
-  * back on admin:
+  * back on the target machine:
 ```
 sudo cp wire.com.crt /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo chmod 644 /usr/local/share/ca-certificates/wire.com/local_mitm.crt
 sudo update-ca-certificates
 ```
 
-### setting up the kubernetes nodes:
-
-#### Provisioning:
-Create three more virtual/physical nodes, attached to the physical interface you are running squid on.
-
-##### Ubuntu 18
-* Install [ubuntu 18 server](http://releases.ubuntu.com/18.04/ubuntu-18.04.3-live-server-amd64.iso)
-  * If you would like to check the checksum, please get it from the top of this file.
-
-##### Ubuntu 16
-* Install [ubuntu 16 server](http://releases.ubuntu.com/16.04/ubuntu-16.04.6-server-amd64.iso)
-
-#### Post-Installation
-* After installing, make sure you perform security updates:
+#### Fixing the MOTD
+You might notice the following message as you log in, after a few logins:
 ```
-sudo apt update
-sudo apt dist-upgrade
+Failed to connect to https://changelogs.ubuntu.com/meta-release-lts. Check your Internet connection or proxy settings
 ```
+
+This comes from ubuntu trying to check for updates before our CA certificate is installed. during this time, the nodes cannot communicate to squid via https.
+
+* To make this go away:
+```
+sudo rm /var/lib/ubuntu-release-upgrader/release-upgrade-available
+```
+
+Note: this may re-appear, due to a network outage.
 
 ### Preparing to install Kubernetes:
 
-#### SSH with keys
-(from https://linoxide.com/how-tos/ssh-login-with-public-key/)
-If you want a bit higher security, you can copy SSH keys between your admin node, and your ansible/kubernetes nodes.
+#### KubeNode Hostnames:
+During the deployment of kubernetes via kubespray, the hostnames of the kubenodes are changed. It is suggested that you change this before running the kubespray install, so that DHCP reservations based on name (like in the next step) will be consistent during the install.
 
-* On 'admin', create an SSH key.
+# To set the hostname of a linux machine, just change /etc/hostname to contain that hostname, and ONLY that hostname. for example:
 ```
-ssh-keygen -t rsa
+sudo bash -c "echo kubenode03 > /etc/hostname"
 ```
 
-* Install your SSH key on each of the kubenodes, so that you can SSH into them without a password:
+# Once you change a hostname, you should also update the appropriate entry in /etc/hosts. as root, edit that file, and change the old hostname for the new one. or:
 ```
-ssh-copy-id -i ~/.ssh/id_rsa.pub $ANSIBLE_LOGIN_USERNAME@$IP
+sudo sed -i s/kubenode3/kubenode03/ /etc/hosts
 ```
-Replace `$ANSIBLE_LOGIN_USERNAME` with the username of the account you set up when you installed the machine.
 
-#### sudo without password
-Ansible can be configured to use a password for switching from the $ANSIBLE_LOGIN_USERNAME to the root user. This involves having the password lying about, so has security problems.
-If you want ansible to not be prompted for any administrative command (a different security problem!):
-
-* As root on each of the nodes, add the following line at the end of the /etc/sudoers file:
-```
-<ANSIBLE_LOGIN_USERNAME>     ALL=(ALL) NOPASSWD:ALL
-```
-Replace `<ANSIBLE_LOGIN_USERNAME>` with the username of the account you set up when you installed the machine.
+After changing a hostname and the hosts entry for that hostname, reboot the machine.
 
 #### Fix IPs.
-It is important to ansible that the IPs of machines do not change.
+It is important when we are configuring ansible that the IPs of the virtual machines do not change.
 
 to accomplish this, there are several methods:
 
@@ -289,7 +291,7 @@ WARNING: this is complicated by the fact that [some playbooks we use change the 
 
 You can configure your DHCP server with additional 'host' sections, matching against a client given identifier, one for each host.
 Cons:
-many DHCP client softwares (ubuntu 18 + netplan) cannot support changing the client ID to a known value. instead, they submit a GUID, based on the mac address.
+Some DHCP client softwares (ubuntu 18 + netplan) cannot support changing the client ID to a known value. instead, they submit a GUID, based on the mac address.
 Does not work with ubuntu 18 + netplan in our KVM environment, where a reboot can change your Mac address.
 
 * on the Proxybox:, get the IPs of all nodes:
@@ -299,9 +301,9 @@ cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK
 
 * On the proxybox, set the IPs of the nodes in /etc/dhcp/dhcpd.conf, so that ansible doesn't break:
 ```
-sudo bash -c 'cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u | sed "s/\(.*\) \(.*\)/host \2\n\toption dhcp-client-identifier \"\2\"\n\tfixed-address \1\n}\n\n/" >> /etc/dhcp/dhcpd.conf'
+sudo bash -c 'cat /var/log/syslog | grep DHCPACK | grep -v ubuntu | grep \) | sed "s/.*DHCPACK on //" | sed "s/to .*[(]//" | sed "s/[)] via.*//" | sort -u | sed "s/\(.*\) \(.*\)/host \2 {\n\toption dhcp-client-identifier \"\2\";\n\tfixed-address \1;\n}\n/" >> /etc/dhcp/dhcpd.conf'
 ```
-This should generate entries like the following:
+This should add entries for each host to the dhcp configuration similar to the following:
 ```
 host <hostname> {
      option dhcp-client-identifier "<hostname>";
@@ -313,6 +315,7 @@ host <hostname> {
 ```
 sudo service isc-dhcp-server restart
 ```
+
 
 NOTE: when you install kubernetes, the kubenode1-3 nodes rename themselves kubenode01-03, so you will need to allow that name in the rules for the three kubernetes nodes.
 NOTE: when you install cassandra, the ansnode1-3 nodes rename themserves cassandra01-03, so you will need to allow that name in the rules for the three kubernetes nodes.
@@ -333,6 +336,7 @@ To prevent further confusion, I suggest adding a 'host' entry in /etc/dhcp/dhcpd
 
 ###### Ubuntu 16:
 * now log into each node, and add the following line to the end of /etc/dhcp/dhclient.conf:
+
 ```
 send dhcp-client-identifier = gethostname();
 ```
@@ -410,12 +414,21 @@ NOTE: when you install kubernetes, the kubenode1-3 nodes rename themselves kuben
 NOTE: when you install cassandra, the ansnode1-3 nodes rename themserves cassandra01-03, so you will need to allow that name in the rules for the three kubernetes nodes, and add a class section for each of those names as well.
 
 ###### Client side
-On ubuntu 18.04, just make sure it got security patched.
+On ubuntu 18.04.2, just make sure it got security patched.
 
-On ubuntu 16.04.06, it should work out of the box.
+On ubuntu 16.04.6 and 18.04.3, it should work out of the box.
 
 #### Deploying Wire
-From here, follow wire-server-deploy/ansible/README.md, with the following exception:
+From here, follow wire-server-deploy/ansible/README.md on your 'admin' node. skip the 'Provision virtual machines' section.
+
+When you get to the 'Preparing to run ansible' section, use the ansnode IPs for cassandra*, elasticsearch* and minio*. use kubenode IPs for ansible_host on kubenode*, 
+FIXME: what about restund?
+
+
+=== BELOW HERE IS DRAGONS ===
+
+
+, with the following exception:
 
 * Once you get to the 'ansible pre-kubernetes' step, check out this repo, and run the setup-mitm-cert.yml script, to copy our certificate to all of the nodes:
 ```
@@ -424,8 +437,6 @@ git clone https://github.com/wireapp/wire-server-deploy-networkless.git
 cd wire-server-deploy/ansible
 poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
 ```
-
-=== BELOW HERE IS DRAGONS ===
 
 helm upgrade to add the demo-databases-ephemeral.
 
