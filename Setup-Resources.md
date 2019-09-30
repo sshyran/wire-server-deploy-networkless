@@ -21,12 +21,28 @@ In order to enable the installanion of poetry, we need to provide raw content de
 
 #### HTTP/HTTPS content delivery
 
-* Follow the instructions in 'Raw Content/HTTP/Setup', and 'Raw Content/HTTPS/Setup'.
+Follow the instructions in 'Raw Content/HTTP/Setup', and 'Raw Content/HTTPS/Setup'.
 
 #### APT repository
 
-* Follow the instructions in 'Repositories/APT' to set up an apt repository. 
+Follow the instructions in 'Repositories/APT' to set up an apt repository. 
+* Set up the APT repository on the machine you want to run ansible from.
 
+#### Raw Content
+
+Follow the instructions in 'Raw Content/HTTPS' to serve our git-poetry.py script.
+* All of the examples in this set of directions were written with this step in mind. Please compare them to the following bullet points, as these points are what following raw content directions are going to look like.
+ * use 'raw.githubusercontent.com' as the domain name
+ * create $CONTENTHOME/sdispater/poetry/master , to place content in.
+ * point the '/sdispater' directory of raw.githubusercontent.com to $CONTENTHOME/sdispater .
+ * populate the content by using curl to download https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py, placing it at $CONTENTHOME/sdispater/poetry/master/get-poetry.py .
+
+
+### Ansible
+
+#### Git pull
+
+Follow the directions in 'Repositories/Git' to set up the 'https://github.com/wireapp/wire-server-deploy' git repository.
 
 ### make download
 the make download step uses three rules in the makefile. we're going to prepare for each of them separately:
@@ -483,19 +499,22 @@ At this point, the content of /var/www/html are available at https://raw.githubu
 ##### Directory Creation
 * Create a directory under /home/wire/docker-squid4/docker-squid. for this example, we're going to create sdispater/poetry/master/, so that we can mirror https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py.
 ```
-mkdir -p /home/wire/docker-squid4/docker-squid/sdispater/poetry/master
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid
+mkdir -p $CONTENTHOME/sdispater/poetry/master
 ```
 
 ##### Content Population
 If you haven't already, populate your new directory with the content you want to serve. for this example:
 ```
-curl https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py -o /home/wire/docker-squid4/docker-squid/sdispater/poetry/master/get-poetry.py
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid
+curl https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py -o $CONTENTHOME/sdispater/poetry/master/get-poetry.py
 ```
 
 ##### Permissions
 * The owner of this directory and all of it's contents must be the user www-data, with the group www-data, so once you are done populating your content:
 ```
-sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/sdispater
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid
+sudo chown -R www-data.www-data $CONTENTHOME/sdispater
 ```
 
 ##### Apache Directory Configuration
@@ -578,15 +597,24 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add –
 
 #### Populating the repository
 
-
 ##### Selecting Contents
-To select what we want in a repository, we create a subset of an FAI configuration directory. Inn this directory, each file specifies a list of packages requiref for that capability to be available in FAI. In this case, we are abusing that, and just using the file names to keep track of which 'thing' requires which packages to be installable in our environment.
+To select what we want in a repository, we create a subset of an FAI configuration directory. Inn this directory, each file specifies a list of packages required for that capability to be available in FAI. In this case, we are abusing that, and just using the file names to keep track of which 'thing' requires which packages to be installable in our environment.
 
-* Create a package_config directory, and place files in it selecting what things to place into our APT repository:
+* Create a package_config directory.
 ```
 mkdir -p fai_config/package_config/
+```
+
+* Place files in the package_config that select what things to place into our APT repository (kitchen sink):
+```
+echo "PACKAGES aptitude-r" > fai_config/package_config/proxybox
+echo "isc-dhcp-server dnsmasq" >> fai_config/package_config/proxybox
 echo "PACKAGES aptitude-r" > fai_config/package_config/raw-content-delivery
 echo "apache2" >> fai_config/package_config/raw-content-delivery
+```
+
+* Place files in the package_config that select what things to place into our APT repository (for the install):
+```
 echo "PACKAGES aptitude-r" > fai_config/package_config/poetry
 echo "python2.7 python-pip" >> fai_config/package_config/poetry
 echo "PACKAGES aptitude-r" > fai_config/package_config/emacs
@@ -620,26 +648,25 @@ sudo sed -i "s/includedeb [^ ]*/includedeb $DISTRO/" /usr/bin/fai-mirror
 
 * To download all of the packages, and create all of the indexes:
 ```
-sudo rm -rf apt_repository
-mkdir -p apt_repository/aptcache/etc/apt/
-cp -a /etc/apt/trusted.gpg.d/ apt_repository/aptcache/etc/apt/
-cp -a /etc/apt/trusted.gpg apt_repository/aptcache/etc/apt/
-fai-mirror -v -b -C fai_etc /home/wire/docker-squid4/docker-squid/apt_repository
-sudo chown -R www-data.www-data /home/wire/docker-squid4/docker-squid/apt_repository
-
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid
+sudo rm -rf $CONTENTHOME/apt_repository
+mkdir -p $CONTENTHOME/apt_repository/aptcache/etc/apt/
+cp -a /etc/apt/trusted.gpg* $CONTENTHOME/apt_repository/aptcache/etc/apt/
+fai-mirror -v -b -C fai_etc $CONTENTHOME/apt_repository
+sudo chown -R www-data.www-data $CONTENTHOME/apt_repository
 ```
 
 ##### Making the repository available to clients:
 
-Your repository is now a directory, so follow the instructions in 'Raw Content/HTTP' steps above to serve it to the nodes in your cluster.
+Your repository is now a directory, so follow the instructions in 'Raw Content/HTTP' above to serve it to the nodes in your cluster.
 * Use 'apt.wire.com' for the name of your repository.
-* Point the '/apt' directory to '/home/wire/docker-squid4/docker-squid/apt_repository'
+* Point the '/apt' directory to '/home/wire/docker-squid4/docker-squid/apt_repository'.
 
 After you've done that, running 'curl apt.wire.com/apt/' on the admin node should show the contents of the apt repo.
 
-##### Configuring your target system to pull from the repository:
+##### Configuring a target system to pull from the repository:
 
-On each node in your cluster (kubernetes and non-kubernetes), move the original sources.list out of the way, and add a one line repository definition for this repo. afterward, disable gpg integrety checks for all repos, and run apt update.
+On each node you want to use this repository, move the original sources.list out of the way, and add a one line repository definition for this repo. afterward, disable gpg integrety checks for all repos, and run apt update.
 ```
 sudo mv /etc/apt/sources.list /etc/apt/sources.list.online
 sudo bash -c 'echo "deb http://apt.wire.com/apt/ bionic stable" >> /etc/apt/sources.list.d/apt.wire.com.sources.list'
@@ -647,53 +674,21 @@ sudo bash -c 'echo "Acquire::AllowInsecureRepositories \"true\"" >> /etc/apt/apt
 sudo apt update
 ```
 
-## Poetry repository:
+### Git:
 
-poetry's repository index is available at:
-```
-https://pypi.org/pypi/poetry/json
-```
+At many places in our instructions, we have to check out a git repository from github.
 
-* Make a directory, and store the poetry index in it:
-```
-mkdir -p /home/wire/docker-squid4/docker-squid/pypi/poetry/
-curl https://pypi.org/pypi/poetry/json -o /home/wire/docker-squid4/docker-squid/pypi/poetry/json
+in git parlance, a repository is a single collection of source code, so this step will set up a single git repository to be downloaded.
 
-* Follow the 'Making a directory available to clients' in the 'Raw Content (https)' section above to serve /home/wire/docker-squid4/docker-squid/pypi as pypi.org.
+#### Setup
 
-The poetry install script reads this index, and uses it to find the most recent version of poetry available.
+Follow the directions in 'Raw Content/HTTPS' to set up a fake 'github.com'.
+* use 'github.com' as the domain name.
+* 
 
-* to get the most recent version of poetry from the json file:
-```
-cat /home/wire/docker-squid4/docker-squid/pypi/poetry/json | jq .info.version
-```
+Since the last step set up our fake github.com, we are only going to need to add content to it:
 
-* to get the sha256sum of a version from the index file:
-```
-cat /home/wire/docker-squid4/docker-squid/pypi/poetry/json | jq '.releases."0.12.17"[1].digests.sha256'
-```
-
-to download a version of poetry and it's sha256sum:
-```
-export POETRYVERSION=0.12.17
-mkdir -p /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/
-curl -L https://github.com/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.sha256sum -o /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.sha256sum
-curl -L https://github.com/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.tar.gz -o /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.tar.gz
-```
-
-FIXME: why does the poetry md5sum in the index file not match the released version on github?
-* Check to ensure the sha256sum of your downloaded poetry tarball matches the sha256sum downloaded with it:
-```
-export POETRYVERSION=0.12.17
-sha256sum /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.tar.gz
-cat /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.sha256sum
-```
-
-* Follow the 'Making a directory available to clients' in the 'Raw Content (https)' section above to serve /home/wire/docker-squid4/docker-squid/sdispater as github.com.
-
-## Git repository:
-
-The next thing our directions download is a git repo, from github.com. Since the last step set up our fake github.com, we are only going to need to add content to it:
+#### Populating the repository
 
 * Make a directory for holding our git repo. for this example, we're going to be mirroring wire-server-deploy.
 ```
@@ -767,6 +762,50 @@ sudo chown -R www-data.www-data $CONTENTHOME/$ORG
 ```
 sudo service apache2 restart
 ```
+
+### Poetry repository:
+
+poetry's repository index is available at:
+```
+https://pypi.org/pypi/poetry/json
+```
+
+* Make a directory, and store the poetry index in it:
+```
+mkdir -p /home/wire/docker-squid4/docker-squid/pypi/poetry/
+curl https://pypi.org/pypi/poetry/json -o /home/wire/docker-squid4/docker-squid/pypi/poetry/json
+
+* Follow the 'Making a directory available to clients' in the 'Raw Content (https)' section above to serve /home/wire/docker-squid4/docker-squid/pypi as pypi.org.
+
+The poetry install script reads this index, and uses it to find the most recent version of poetry available.
+
+* to get the most recent version of poetry from the json file:
+```
+cat /home/wire/docker-squid4/docker-squid/pypi/poetry/json | jq .info.version
+```
+
+* to get the sha256sum of a version from the index file:
+```
+cat /home/wire/docker-squid4/docker-squid/pypi/poetry/json | jq '.releases."0.12.17"[1].digests.sha256'
+```
+
+to download a version of poetry and it's sha256sum:
+```
+export POETRYVERSION=0.12.17
+mkdir -p /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/
+curl -L https://github.com/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.sha256sum -o /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.sha256sum
+curl -L https://github.com/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.tar.gz -o /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.tar.gz
+```
+
+FIXME: why does the poetry md5sum in the index file not match the released version on github?
+* Check to ensure the sha256sum of your downloaded poetry tarball matches the sha256sum downloaded with it:
+```
+export POETRYVERSION=0.12.17
+sha256sum /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.tar.gz
+cat /home/wire/docker-squid4/docker-squid/sdispater/poetry/releases/download/$POETRYVERSION/poetry-$POETRYVERSION-linux.sha256sum
+```
+
+* Follow the 'Making a directory available to clients' in the 'Raw Content (https)' section above to serve /home/wire/docker-squid4/docker-squid/sdispater as github.com.
 
 ## building a pypi repo:
 

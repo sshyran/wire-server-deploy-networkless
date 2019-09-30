@@ -411,3 +411,6 @@ https://dl.k8s.io/release/stable-1.14.txt
 
 
 
+#### Helm:
+
+The install now tries to set up a helm repo, hitting kubernetes-charts.storage.googleapis.com/index.yaml .
