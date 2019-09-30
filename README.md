@@ -316,8 +316,27 @@ host <hostname> {
 sudo service isc-dhcp-server restart
 ```
 
-###### Ubuntu 16
-* log into each node, and add the following line to the end of /etc/dhcp/dhclient.conf:
+
+NOTE: when you install kubernetes, the kubenode1-3 nodes rename themselves kubenode01-03, so you will need to allow that name in the rules for the three kubernetes nodes.
+NOTE: when you install cassandra, the ansnode1-3 nodes rename themserves cassandra01-03, so you will need to allow that name in the rules for the three kubernetes nodes.
+
+To prevent confision, I suggest changing the hostnames of kubenode1-3 to kubenode01-03, and changing ansnode1-3 to cassandra01-03.
+To change the hostname of a node, and reboot it:
+```
+export HOSTNO=1
+sudo sed -i "s/node$HOSTNO/node0$HOSTNO/" /etc/hosts
+sudo sed -i "s/node$HOSTNO/node0$HOSTNO/" /etc/hostname
+sudo sed -i "s/ansnode/cassandra/" /etc/hosts
+sudo sed -i "s/ansnode/cassandra/" /etc/hostname
+sudo reboot
+```
+
+To prevent further confusion, I suggest adding a 'host' entry in /etc/dhcp/dhcpd.conf for each ansnode, to provide the same address after it changes names to cassandra0[1-3].
+
+
+###### Ubuntu 16:
+* now log into each node, and add the following line to the end of /etc/dhcp/dhclient.conf:
+
 ```
 send dhcp-client-identifier = gethostname();
 ```
@@ -327,15 +346,21 @@ send dhcp-client-identifier = gethostname();
 You can configure your DHCP server with 'class' sections matching the hostname given by the client, and put 'pools' of leases with a single lease in each, that only allows an individual class.
 Pros:
 Works in our KVM environment.
-Easy to tell most systems to provide a hostname, Ubuntu 18 (after security patching) does so by default.
+Easy to tell most systems to provide a hostname, Ubuntu 18 does so by default.
+handles hostname switching easily.
 Cons:
 Long, ugly, complicated configuration.
-Ubuntu 18 must be security patched before it provides a hostname.
 
 ###### Server Side
 For each host, add one class section BEFORE our subnet declaration in /etc/dhcp/dhcpd.conf. for example:
 ```
 class "admin" { match if option host-name = "admin"; }
+class "kubenode1" { match if option host-name = "kubenode01" or option host-name = "kubenode1"; }
+class "kubenode2" { match if option host-name = "kubenode02" or option host-name = "kubenode2"; }
+class "kubenode3" { match if option host-name = "kubenode03" or option host-name = "kubenode3"; }
+class "ansnode1" { match if option host-name = "cassandra01" or option host-name = "ansnode1"; }
+class "ansnode2" { match if option host-name = "cassandra02" or option host-name = "ansnode2"; }
+class "ansnode3" { match if option host-name = "cassandra03" or option host-name = "ansnode3"; }
 ```
 
 Rewrite your subnet section. create a pool containing only the leases you've been giving out, and deny members of each of your classes from getting a lease from that pool. now for each class, create a pool, allow that class access to that pool, and stick one IP in that pool. The result shoud look something like this:
@@ -346,11 +371,41 @@ subnet 10.0.0.0 netmask 255.255.255.0 {
   option broadcast-address 10.0.0.255;
   pool {
     deny members of "admin";
+    deny members of "kubenode1";
+    deny members of "kubenode2";
+    deny members of "kubenode3";
+    deny members of "ansnode1";
+    deny members of "ansnode2";
+    deny members of "ansnode3";
     range 10.0.0.8 10.0.0.28;
   }
   pool {
     allow members of "admin";
-    range 10.0.0.38 10.0.0.38;
+    range 10.0.0.8 10.0.0.8;
+  }
+  pool {
+    allow members of "kubenode1";
+    range 10.0.0.9 10.0.0.9;
+  }
+  pool {
+    allow members of "kubenode2";
+    range 10.0.0.10 10.0.0.10;
+  }
+  pool {
+    allow members of "kubenode3";
+    range 10.0.0.11 10.0.0.11;
+  }
+  pool {
+    allow members of "ansnode1";
+    range 10.0.0.12 10.0.0.12;
+  }
+  pool {
+    allow members of "ansnode2";
+    range 10.0.0.13 10.0.0.13;
+  }
+  pool {
+    allow members of "ansnode3";
+    range 10.0.0.14 10.0.0.14;
   }
 }
 ```
