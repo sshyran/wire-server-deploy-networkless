@@ -146,16 +146,16 @@ sudo apt install bridge-utils
 ```
 
 ##### LocalHost -> KVM
-== Skip this entire step if we are not providing internet and IP connectivity to any VM, AKA if you are not using LOCALBRIDGE ==
+== Skip this entire step if we are not providing internet and IP connectivity to any VM, AKA if you are not using HOSTBRIDGE ==
 
-For LOCALBRIDGE, we are going to install and configure an ip-masquerading firewall, a DHCP server, and a DNS server, so that VMs using the LOCALBRIDGE strategy can access the internet, through services on the host machine.
+For HOSTBRIDGE, we are going to install and configure an ip-masquerading firewall, a DHCP server, and a DNS server, so that VMs using the HOSTBRIDGE strategy can access the internet, through services on the host machine.
 
 * Install dependencies. the UFW firewall, ISC's DHCP server, and the Bind nameserver:
 ```
 sudo apt install ufw isc-dhcp-server bind9
 ```
 
-* make sure we can connect on port 22 tcp so we can ssh into the hypervisor from the outside world, and from machines using LOCALBRIDGE.
+* make sure we can connect on port 22 tcp so we can ssh into the hypervisor from the outside world, and from machines using HOSTBRIDGE.
 ```
 sudo ufw allow 22/tcp
 ```
@@ -204,14 +204,14 @@ net.ipv4.ip_forward=1
 #net/ipv6/conf/all/forwarding=1
 ```
 
-* Add a 'POSTROUTING' rule in the 'NAT' table, to direct traffic bidirectionally between your LOCALBRIDGE subnet and the internet. This entry is added in /etc/ufw/before.rules. If this has not been done on this machine before, you may have to add this entire section right after the first comment block in /etc/ufw/before.rules. If this section already exists, add just the line starting with '-A POSTROUTING' into the already existing block.  Make sure to change the 'enp0s25' interface name to match the interface your machine uses to get to the internet (look at 'ip route show default'), and to use your selected LOCALBRIDGE subnet range:
+* Add a 'POSTROUTING' rule in the 'NAT' table, to direct traffic bidirectionally between your HOSTBRIDGE subnet and the internet. This entry is added in /etc/ufw/before.rules. If this has not been done on this machine before, you may have to add this entire section right after the first comment block in /etc/ufw/before.rules. If this section already exists, add just the line starting with '-A POSTROUTING' into the already existing block.  Make sure to change the 'enp0s25' interface name to match the interface your machine uses to get to the internet (look at 'ip route show default'), and to use your selected HOSTBRIDGE subnet range:
 ```
 
 # NAT table rules
 *nat
 :POSTROUTING ACCEPT [0:0]
 
-# Masqeurade traffic from our LOCALBRIDGE network of 172.16.0/24 to enp0s25. enp0s25 is probably not the name of your network card. check, and adjust.
+# Masqeurade traffic from our HOSTBRIDGE network of 172.16.0/24 to enp0s25. enp0s25 is probably not the name of your network card. check, and adjust.
 -A POSTROUTING -s 172.16.0/24 -o enp0s25 -j MASQUERADE
 
 # don't delete the 'COMMIT' line or these nat table rules won't
@@ -226,12 +226,12 @@ sudo ufw disable && sudo ufw enable
 
 ####### DHCP services:
 
-In order for VMs plugged into the LOCALBRIDGE to get an address, they will use DHCP. We're going to configure ISC's DHCPD to provide those addresses.
+In order for VMs plugged into the HOSTBRIDGE to get an address, they will use DHCP. We're going to configure ISC's DHCPD to provide those addresses.
 
 * edit /etc/dhcp/dhcpd.conf
  * comment out the line at the top reading: 'option domain-name "example.org";'
  * comment out the line near the top reading: 'option domain-name-servers ns1.example.org, ns2.example.org;'
- * add the following to the end of the file, to provide addresses to your selected LOCALBRIDGE subnet range. Make sure to change the addresses to match your selected LOCALBRIDGE subnet:
+ * add the following to the end of the file, to provide addresses to your selected HOSTBRIDGE subnet range. Make sure to change the addresses to match your selected HOSTBRIDGE subnet:
 ```
 # provide DHCP to our hosted kvm network.
 subnet 172.16.0.0 netmask 255.255.255.0 {
@@ -252,7 +252,7 @@ sudo service isc-dhcp-server restart
 ```
 
 ####### Name Services:
-DNS services will be handled by BIND, which is configured properly by default. The only thing we need to do is poke a hole in the firewall, so that the LOCALBRIDGEs can access it.
+DNS services will be handled by BIND, which is configured properly by default. The only thing we need to do is poke a hole in the firewall, so that the HOSTBRIDGEs can access it.
 
 * add port 53 udp to the list of ports to allow remote connections from.
 ```
