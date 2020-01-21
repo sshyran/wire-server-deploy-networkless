@@ -138,8 +138,65 @@ export REPO=$ORG/ansible-role-admin-users.git
 clone_git_repo
 add_git_org
 ```
-
 ... simple, right?
+
+###### hegemony
+For experimentation, let's also grab the hegemony repo's dependencies:
+```
+export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
+export DOMAINNAME=github.com
+
+# expects CONTENTHOME, DOMAINNAME, ORG, and REPO
+function clone_git_repo {
+export REPOURI=https://$DOMAINNAME/$REPO
+mkdir -p $CONTENTHOME/$ORG
+git clone --bare $REPOURI $REPO
+mv $REPO/hooks/post-update.sample $REPO/hooks/post-update
+chmod a+x $REPO/hooks/post-update
+cd $REPO && git update-server-info
+cd $CONTENTHOME
+}
+
+# expects CONTENTHOME, DOMAINNAME, and ORG.
+function add_git_org {
+export DIRNAME=$ORG
+export TARGETDIR=$CONTENTHOME/$ORG
+sudo sed -i "s=\(</VirtualHost>\)=alias /$DIRNAME $TARGETDIR\n<Directory $TARGETDIR>\nOptions Indexes FollowSymLinks MultiViews\nRequire all granted\n</Directory>\n\1=" /etc/apache2/sites-available/000-$DOMAINNAME.conf
+sudo chown -R www-data.www-data $CONTENTHOME/$ORG
+}
+
+# prime sudo
+sudo echo
+
+export ORG=ahelal
+export REPO=$ORG/ansible-concourse.git
+clone_git_repo
+add_git_org
+
+export ORG=nickhammond
+export REPO=$ORG/ansible-logrotate.git
+clone_git_repo
+add_git_org
+
+export ORG=SimpliField
+export REPO=$ORG/ansible-transparent-huge-pages.git
+clone_git_repo
+add_git_org
+
+export ORG=nginxinc
+export REPO=$ORG/ansible-role-nginx.git
+clone_git_repo
+add_git_org
+
+export ORG=cloudalchemy
+export REPO=$ORG/ansible-alertmanager.git
+clone_git_repo
+
+export ORG=cloudalchemy
+export REPO=$ORG/ansible-prometheus.git
+clone_git_repo
+add_git_org
+```
 
 ###### Restart Apache
 
@@ -619,10 +676,14 @@ echo "PACKAGES aptitude-r" > fai_config/package_config/poetry
 echo "python2.7 python-pip" >> fai_config/package_config/poetry
 echo "PACKAGES aptitude-r" > fai_config/package_config/emacs
 echo "emacs25-nox" >> fai_config/package_config/emacs
+echo "PACKAGES aptitude-r" > fai_config/package_config/vim
+echo "vim" >> fai_config/package_config/vim
 echo "PACKAGES aptitude-r" > fai_config/package_config/ansible
 echo "sshpass" >> fai_config/package_config/ansible
 echo "PACKAGES aptitude-r" > fai_config/package_config/unarchive-deps
 echo "python-apt" >> fai_config/package_config/unarchive-deps
+echo "PACKAGES aptitude-r" > fai_config/package_config/openvpn-deps
+echo "easy-rsa openvpn" >> fai_config/package_config/openvpn-deps
 echo "PACKAGES aptitude-r" > fai_config/package_config/kubernetes
 echo "aufs-tools python-httplib2 socat unzip ipvsadm" >> fai_config/package_config/kubernetes
 echo "pigz cgroupfs-mount libltdl7 containerd.io docker-ce-cli docker-ce" >> fai_config/package_config/kubernetes
@@ -637,7 +698,7 @@ APT repositories have the name of the distribution, as well as the components av
 * Force the fai-mirror tool to create a mirror named 'bionic', with a 'stable' component.
 ```
 export DISTRO=bionic
-export COMPONENT=stable
+export COMPONENT="stable universe"
 sudo sed -i "s/Codename: .*/Codename: $DISTRO/" /usr/bin/fai-mirror
 sudo sed -i "s/Components: .*/Components: $COMPONENT/" /usr/bin/fai-mirror
 sudo sed -i "s/includedeb [^ ]*/includedeb $DISTRO/" /usr/bin/fai-mirror
