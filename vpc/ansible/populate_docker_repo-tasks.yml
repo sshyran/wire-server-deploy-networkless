@@ -78,7 +78,7 @@
   register: registry_image_id
 
 - name: serialize docker registry image into offline content directory.
-  command: bash -c "docker image save {{ registry_image_id.stdout }} | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/registry_2-{{ registry_image_id.stdout }}-amd64.tar.bz2" 
+  command: bash -c "docker image save {{ registry_image_id.stdout }} | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2" 
 
 - name: include our list of docker images to mirror
   include_vars: 'group_vars/docker_images.yml'

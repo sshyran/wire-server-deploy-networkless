@@ -20,13 +20,6 @@
    name: docker-ce
   become: yes
 
-- name: enable use of docker by the ubuntu user
-  user:
-    name: ubuntu
-    groups: docker
-    append: yes
-  become: yes
-
 - name: install docker-ce-cli
   apt:
    name: docker-ce-cli
@@ -35,6 +28,13 @@
 - name: install containerd.io
   apt:
    name: containerd.io
+  become: yes
+
+- name: enable use of docker by the ubuntu user
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
   become: yes
 
 - name: enable use of experimental docker features.
@@ -55,10 +55,11 @@
   command: groups
 
 - name: restore docker registry image from offline content directory.
-  command: bash -c "cat {{ offline_content_dir }}/docker_repository/registry_2-*-amd64.tar.bz2 | bzip2 -c -d | docker image load"
+  command: bash -c "cat {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2 | bzip2 -c -d | docker image load"
+  register: docker_load_out
 
 - name: find the image ID of the docker registry image
-  command: bash -c "ls {{ offline_content_dir }}/docker_repository/registry_2-*-amd64.tar.bz2 | sed 's/.*-\([0-9a-f]*\)-amd64.*/\1/' " 
+  command: bash -c "echo {{ docker_load_out.stdout }} | sed 's/.*://'"
   register: registry_image_id
 
 - name: tag docker registry image
@@ -111,4 +112,15 @@
     remote_src: yes
 
 - name: start offline docker registry
-  command: echo success
+  command: 'bash -c "{{ offline_delivery_dir }}/docker-registry/registry-run.sh || true"'
+  args:
+    chdir: '{{ offline_delivery_dir }}/docker-registry/'
+
+- name: get a list of docker images to load into docker.
+  find:
+    paths: '{{ offline_content_dir }}/docker_repository/*'
+  register: docker_images
+
+- name: import docker images
+  command: bash -c "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | sed 'sq=q/q' )"
+  with_items: '{{ docker_images.files }}'
