@@ -1,0 +1,142 @@
+---
+- name: remove packages
+  apt: >
+    pkg={{ item }}
+    state=absent
+    update_cache=yes
+    purge=yes
+  with_items: '{{ packages_to_remove }}'
+
+  name: remove packages (ubuntu14 only)
+  apt: >
+    pkg={{ item }}
+    state=absent
+    update_cache=yes
+    purge=yes
+  with_items:
+    - libcap-ng0
+  when: ansible_distribution_version == '14.04'
+
+- name: add packages
+  apt: >
+    pkg={{ item }}
+    state=latest
+    install_recommends=no
+  with_items: '{{ packages_to_add }}'
+
+- name: add packages (ubuntu18 only)
+  apt: >
+    pkg={{ item }}
+    state=latest
+    install_recommends=no
+  with_items:
+    - resolvconf
+  when: ansible_distribution_version == '18.04'
+
+- name: system apt upgrade
+  apt: >
+    upgrade=dist
+    force=yes
+
+- name: install modified cloud.cfg
+  copy: >
+    src=cloud.cfg
+    dest=/etc/cloud/cloud.cfg
+    owner=root
+    group=root
+    mode=0644
+    backup=yes
+
+- name: copy ephemeral storage scripts
+  copy: >
+    src={{ item }}
+    dest=/usr/local/bin/{{ item }}
+    owner=root
+    group=root
+    mode=0755
+  with_items:
+    - clown-init-ephemeral
+
+- name: set mount options (ubuntu 14)
+  set_fact:
+    golden_image_mount_options: 'defaults,nobootwait,noatime'
+  when: ansible_distribution_version == '14.04'
+
+- name: copy ephemeral storage scripts from template
+  template: >
+    src={{ item }}.j2
+    dest=/usr/local/bin/{{ item }}
+    owner=root
+    group=root
+    mode=0755
+  with_items:
+    - clown-mount-ephemeral
+
+- name: install ephemeral storage upstart jobs
+  copy: >
+    src={{ item }}
+    dest=/etc/init/{{ item }}
+    owner=root
+    group=root
+    mode=0644
+  with_items:
+    - clown-init-ephemeral.conf
+    - clown-mount-ephemeral.conf
+  when: ansible_distribution_version == "14.04"
+
+- name: install ephemeral storage systemd unit files
+  copy: >
+    src={{ item }}
+    dest=/lib/systemd/system/{{ item }}
+    owner=root
+    group=root
+    mode=0644
+  with_items:
+    - clown-init-ephemeral.service
+    - clown-mount-ephemeral.service
+  when: ansible_distribution_version != "14.04"
+
+# src and fstype is required but not used by by `absent`
+- name: make sure /mnt and swap is not in /etc/fstab
+  mount: >
+    name={{ item }}
+    src=whatever
+    fstype=whatever
+    state=absent
+  with_items:
+    - /mnt
+    - none
+
+- name: recreate /mnt if it was removed by the previous task
+  file: >
+    path=/mnt
+    state=directory
+
+- name: install resolv.conf.d/tail
+  copy: >
+    src=resolv.conf.d/tail
+    dest=/etc/resolvconf/resolv.conf.d/tail
+    backup=yes
+  notify:
+    - regenerate resolv.conf
+
+- name: set net.core.somaxconn = 2048
+  sysctl: >
+    name=net.core.somaxconn
+    value=2048
+    sysctl_set=yes
+    reload=yes
+
+- name: set net.ipv4.tcp_max_syn_backlog = 2048
+  sysctl: >
+    name=net.ipv4.tcp_max_syn_backlog
+    value=2048
+    sysctl_set=yes
+    reload=yes
+
+- name: enable mount
+  shell: 'systemctl enable {{ item }}'
+  with_items:
+    - clown-init-ephemeral
+    - clown-mount-ephemeral
+  when: ansible_distribution_version != "14.04"

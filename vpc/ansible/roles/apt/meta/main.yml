@@ -1,0 +1,6 @@
+---
+dependencies:
+  - role: package
+    package_name: unattended-upgrades
+  - role: package
+    package_name: update-notifier-common

@@ -1,0 +1,242 @@
+---
+- name: gather ec2 metadata facts
+  action: ec2_metadata_facts
+  when: wdt_infra == 'aws'
+  tags: new
+
+- name: detect assigned vpn server ordinal
+  command: 'hostname'
+  register: kvm_hostname
+  when: wdt_infra == 'kvm'
+
+- name: select vpn server name (kvm)
+  set_fact:
+    vpn_server_ord: '{{ kvm_hostname.stdout }}'
+  when: wdt_infra == 'kvm'
+    
+- name: select vpn server ordinal
+  set_fact:
+    vpn_server_ord: '{% if vpn_routing.primary == ansible_ec2_public_hostname %}{{ vpn_primary_name }}{% else %}{{ vpn_secondary_name }}{% endif %}'
+  when: vpn_server_ord is not defined and wdt_infra == 'aws'
+
+- name: select vpn server external IP (ec2)
+  set_fact:
+    external_ip: '{{ ansible_ec2_local_ipv4 }}'
+  when: wdt_infra == 'aws'
+
+- name: detect vpn server external IP (kvm) 
+  command: ' bash -c "ip route | grep default | grep 172 | sed \"s/.*src \([0-9.]*\).*/\1/\""'
+  register: kvm_172_if
+  when: wdt_infra == 'kvm'
+
+- name: select vpn server external IP (kvm)
+  set_fact:
+    external_ip: '{{ kvm_172_if.stdout }}'
+  when: wdt_infra == 'kvm'
+
+- name: detect vpn server internal IP (kvm)
+  command: ' bash -c "ip route | grep default | grep 10.0.0 | sed \"s/.*src \([0-9.]*\).*/\1/\""'
+  register: kvm_10_if
+  when: wdt_infra == 'kvm'
+
+- name: select vpn server internal IP (kvm)
+  set_fact:
+    internal_ip: '{{ kvm_10_if.stdout }}'
+  when: wdt_infra == 'kvm'
+
+- name: use internal IP as unique identifier
+  set_fact:
+    vpn_node_unique_identifier: '{{ internal_ip }}'
+  when: wdt_infra == 'kvm'
+
+- name: use ec2 hostname as unique identifier
+  set_fact:
+    vpn_node_unique_identifier: '{{ ansible_ec2_public_hostname }}'
+  when: wdt_infra == 'aws'
+
+- name: create prerequisite CA directories
+  file:
+    path: '{{ item }}'
+    owner: root
+    group: root
+    mode: 0700
+    state: directory
+  with_items:
+    - '{{ vpn_ca_dir }}'
+    - '{{ vpn_ca_dir }}/certs'
+    - '{{ vpn_ca_dir }}/private'
+    - '{{ vpn_ca_dir }}/newcerts'
+    - '{{ vpn_ca_dir }}/crl'
+    - '{{ vpn_certs_dir }}'
+    - '{{ vpn_script_dir }}'
+
+- name: create prerequisite openvpn directories
+  file:
+    path: '{{ item }}'
+    mode: 0755
+    state: directory
+  with_items:
+    - '{{ vpn_ccd_dir }}'
+
+- name: touch index file
+  file:
+    path: '{{ vpn_ca_dir }}/index.txt'
+    owner: root
+    mode: 0644
+    state: touch
+
+- name: ensure serial file exists
+  copy:
+    content: 1000
+    dest: '{{ vpn_ca_dir }}/serial'
+    owner: root
+    mode: 0644
+    force: no
+
+- name: ensure crlnumber file exists
+  copy:
+    content: 1000
+    dest: '{{ vpn_ca_dir }}/crlnumber'
+    owner: root
+    mode: 0644
+    force: no
+
+- name: write openssl configuration
+  template:
+    src: openssl.cnf.j2
+    dest: '{{ vpn_ca_dir }}/openssl.cnf'
+    owner: root
+    mode: 0644
+
+- name: ensure ip reservation file exists
+  copy:
+    content: 1000
+    dest: /etc/openvpn/ipp.txt
+    owner: root
+    mode: 0644
+    force: no
+
+- name: detect how many bits long the generated diffie helman parameters are.
+  command: 'bash -c "ls /{{ vpn_ca_dir }}/dh*.pem | tr -d -c \"[:digit:]\""'
+  register: dh_digits
+
+- name: memorize diffie helman key length.
+  set_fact:
+    dh_keylength: '{{ dh_digits.stdout }}'
+
+
+- name: write openvpn server configuration
+  template:
+    src: server.conf.j2
+    dest: '{{ vpn_home_dir }}/server.conf'
+    owner: root
+    mode: 0644
+
+- name: write management script includes
+  template:
+    src: 'scripts/{{ item }}.sh.j2'
+    dest: '{{ vpn_script_dir }}/{{ item }}.sh'
+    owner: root
+    mode: 0644
+  with_items:
+    - common
+    - common-client
+
+- name: write management scripts
+  template:
+    src: 'scripts/{{ item }}.sh.j2'
+    dest: '{{ vpn_script_dir }}/{{ item }}.sh'
+    owner: root
+    mode: 0755
+  with_items:
+    - generate-config
+    - issue-server
+    - issue-client
+    - revoke-cert
+    - preserve-ccd
+    - generate-crl
+
+- name: write client configurations
+  template:
+    src: ccd.j2
+    dest: '{{ vpn_ccd_dir }}/{{ item.key }}'
+  with_dict: '{{ vpn_routing.ccd }}'
+  tags:
+    - ccd
+
+  # NOTE: this seems broken, and deletes everything under /etc/openvpn/ccd/
+- name: remove non-whitelisted client configurations
+  command: '{{ vpn_script_dir }}/preserve-ccd.sh {{ vpn_routing.ccd.keys()|join(" ") }}'
+  tags:
+    - ccd
+
+- name: write client configurations
+  template:
+    src: ccd.j2
+    dest: '{{ vpn_ccd_dir }}/{{ item.key }}'
+  with_dict: '{{ vpn_routing.ccd }}'
+  tags:
+    - ccd
+
+- name: enable ipv4 forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    sysctl_set: yes
+    reload: yes
+
+- name: ensure primary vpn specified
+  fail: msg='vpn_routing.primary must be specified.'
+  when: vpn_routing.primary is not defined
+
+- name: generate primary certificate
+  command: '{{ vpn_home_dir }}/script/issue-server.sh -n {{ vpn_primary_server_name }}'
+  args:
+    creates: '{{ vpn_ca_dir }}/certs/{{ vpn_primary_server_name }}.pem'
+  when: vpn_node_unique_identifier == vpn_routing.primary
+
+- name: generate secondary certificate
+  command: '{{ vpn_home_dir }}/script/issue-server.sh -n {{ vpn_secondary_server_name }}'
+  args:
+    creates: '{{ vpn_ca_dir }}/certs/{{ vpn_secondary_server_name }}.pem'
+  when: vpn_node_unique_identifier == vpn_routing.primary and vpn_routing.secondary is defined
+
+- name: ensure permissions for primary server keys
+  file:
+    path: '{{ item }}'
+    owner: root
+    group: root
+    mode: 0400
+    state: file
+  with_items:
+    - '{{ vpn_ca_dir }}/certs/{{ vpn_primary_server_name }}.pem'
+    - '{{ vpn_ca_dir }}/certs/{{ vpn_primary_server_name }}.key'
+    - '{{ vpn_ca_dir }}/certs/{{ vpn_primary_server_name }}.csr'
+  when: vpn_node_unique_identifier == vpn_routing.primary
+
+- name: ensure permissions for secondary server keys
+  file:
+    path: '{{ item }}'
+    owner: root
+    group: root
+    mode: 0400
+    state: file
+  with_items:
+    - '{{ vpn_ca_dir }}/certs/{{ vpn_secondary_server_name }}.pem'
+    - '{{ vpn_ca_dir }}/certs/{{ vpn_secondary_server_name }}.key'
+    - '{{ vpn_ca_dir }}/certs/{{ vpn_secondary_server_name }}.csr'
+  when: vpn_node_unique_identifier == vpn_routing.primary and vpn_routing.secondary is defined
+
+- name: generate a CRL
+  command: '{{ vpn_home_dir }}/script/generate-crl.sh'
+  args:
+    creates: '{{ vpn_ca_dir }}/crl/crl.pem'
+  when: vpn_node_unique_identifier == vpn_routing.primary
+
+- name: ensure openvpn is running
+  systemd:
+    name: openvpn-server@server
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  when: vpn_node_unique_identifier == vpn_routing.primary

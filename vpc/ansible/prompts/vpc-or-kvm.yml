@@ -1,0 +1,14 @@
+---
+- name: Select KVM or VPC
+  pause:
+    prompt: "Are you targeting KVM or an AWS VPC (KVM or VPC?)"
+  register: kvm_or_vpc
+
+- name: set fact from prompt
+  set_fact:
+    wdt_infra: '{{ kvm_or_vpc.user_input | lower }}'
+
+- name: ensure response is parsed
+  fail: msg='cannot parse response {{ kvm_or_aws.user_input }}'
+  when: wdt_infra != "vpc" and wdt_infra != "kvm" 
+

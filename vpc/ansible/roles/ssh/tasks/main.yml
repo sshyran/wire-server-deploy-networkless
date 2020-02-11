@@ -1,0 +1,20 @@
+---
+- name: sshd config
+  template: >
+    src=sshd_config.j2
+    dest=/etc/ssh/sshd_config
+    owner=root
+    group=root
+    mode=600
+  notify:
+    - restart sshd
+  tags:
+    - sshd
+
+- name: ssh config
+  template: >
+    src=ssh_config.j2
+    dest=/etc/ssh/ssh_config
+    owner=root
+    group=root
+    mode=644

@@ -1,0 +1,12 @@
+---
+# Docs on new golden images: https://github.com/zinfra/backend-wiki/wiki/Creating-golden-images
+# base ubuntu 16 and ubuntu 18 does not include python2 (required by ansible)
+- name: Ensure python2.7 is installed.
+  raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+- name: gather facts after python is setup
+  setup:
+
+- name: golden image setup
+  import_role:
+    name: golden_image

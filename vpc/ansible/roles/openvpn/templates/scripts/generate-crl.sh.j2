@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+export SYNOPSIS=<<EOF
+  (Re)generate the CRL.
+EOF
+
+usage() {
+    echo "Usage: $0 $SYNOPSIS" 1>&2
+    exit 1
+}
+
+source $(cd "$( dirname "$0" )" && pwd)/common.sh
+
+echo "Generating new CRL ..."
+openssl ca -gencrl -out {{ vpn_ca_dir }}/crl/crl.pem -config "$ssl_config"
+cp {{ vpn_ca_dir }}/crl/crl.pem /etc/openvpn/crl.pem

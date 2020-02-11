@@ -1,0 +1,114 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: update apt cache
+  apt: update_cache=yes
+  become: yes
+
+- name: install docker-ce
+  apt:
+   name: docker-ce
+  become: yes
+
+- name: enable use of docker by the ubuntu user
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+  become: yes
+
+- name: install docker-ce-cli
+  apt:
+   name: docker-ce-cli
+  become: yes
+
+- name: install containerd.io
+  apt:
+   name: containerd.io
+  become: yes
+
+- name: enable use of experimental docker features.
+  replace:
+    path: /lib/systemd/system/docker.service
+    regexp: 'ExecStart=/usr/bin/dockerd -H fd://'
+    replace: 'ExecStart=/usr/bin/dockerd -H fd:// --experimental=true'
+  become: yes
+
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: dump groups, debugging
+  command: groups
+
+- name: restore docker registry image from offline content directory.
+  command: bash -c "cat {{ offline_content_dir }}/docker_repository/registry_2-*-amd64.tar.bz2 | bzip2 -c -d | docker image load"
+
+- name: find the image ID of the docker registry image
+  command: bash -c "ls {{ offline_content_dir }}/docker_repository/registry_2-*-amd64.tar.bz2 | sed 's/.*-\([0-9a-f]*\)-amd64.*/\1/' " 
+  register: registry_image_id
+
+- name: tag docker registry image
+  command: docker tag {{ registry_image_id.stdout }} registry:2
+
+- name: create home for docker registry
+  file:
+    path: '{{ offline_delivery_dir }}/docker-registry'
+    state: directory
+
+- name: create directory tree
+  file:
+    path: "{{ offline_delivery_dir }}/docker-registry/{{ item }}"
+    state: directory
+  with_items:
+    - /certs
+    - /images
+
+- name: copy bash scripts
+  copy:
+    src: 'files/registry/{{ item }}'
+    dest: '{{ offline_delivery_dir }}/docker-registry/{{ item }}'
+    mode: 0755
+  with_items:
+    - images.sh
+    - upload_image.sh
+    - registry-run.sh
+    - list_of_docker_images.txt
+    - mk-sub-certificate
+
+- name: 'create certificate for docker.{{ fake_domain }} (1 of 3)'
+  command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key 2048'
+
+- name: 'create certificate for docker.{{ fake_domain }} (2 of 3)'
+  command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/docker.{{ fake_domain }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN=docker.{{ fake_domain }}"'
+
+- name: 'create certificate for docker.{{ fake_domain }} (3 of 3)'
+  command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/docker.{{ fake_domain }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/docker.{{ fake_domain }}.pem -days 500 -sha256'
+
+- name: copy docker.{{ fake_domain }} certificate to where the registry wants it.
+  copy:
+    dest: '{{ offline_delivery_dir }}/docker-registry/certs/client.crt'
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/docker.{{ fake_domain }}.pem'
+    remote_src: yes
+
+- name: copy docker.{{ fake_domain }} key to where the registry wants it.
+  copy:
+    dest: '{{ offline_delivery_dir }}/docker-registry/certs/client.key'
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key'
+    remote_src: yes
+
+- name: start offline docker registry
+  command: echo success

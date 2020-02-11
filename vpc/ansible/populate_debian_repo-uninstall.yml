@@ -1,0 +1,48 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: disable ubuntu universe repository.
+  file:
+    path: /etc/sources.list.d/ubuntu_universe.sources.list
+    state: absent
+  become: yes
+
+- name: update apt cache
+  apt: update_cache=yes
+  become: yes
+
+- name: remove fai-server
+  apt:
+   name: fai-server
+   state: absent
+  become: yes
+
+- name: remove reprepro
+  apt:
+   name: reprepro
+   state: absent
+  become: yes
+
+- name: remove aptitude
+  apt:
+   name: aptitude
+   state: absent
+  become: yes
+
+- name: remove fai configuration directories (1 of 2).
+  file:
+    path: /etc/sources.list.d/ubuntu_universe.sources.list
+    state: absent
+  become: yes
+
+- name: remove fai configuration directories (1 of 2).
+  file:
+    path: /etc/sources.list.d/ubuntu_universe.sources.list
+    state: absent
+  become: yes

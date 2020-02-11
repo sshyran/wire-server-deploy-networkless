@@ -1,0 +1,14 @@
+---
+- name: Select environment
+  pause:
+    prompt: "What environment is the instance you're targeting in?"
+  register: env
+
+- name: set fact from prompt
+  set_fact:
+    wdt_env: '{{ env.user_input | lower }}'
+
+- name: ensure response is parsed
+  fail: msg='cannot parse response {{ env.user_input }}'
+  when: wdt_env != "crash" and wdt_env != "offline" 
+

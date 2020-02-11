@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+export SYNOPSIS=<<EOF
+  Issue a client certificate.
+EOF
+
+source $(cd "$( dirname "$0" )" && pwd)/common-client.sh
+
+if [ -e "$client_dir" ]; then
+    echo "${client_dir} already exists." 1>&2
+    exit 1
+fi
+
+exists=`grep "CN=${client_name}" "{{ vpn_ca_dir }}/index.txt" | grep "^V"`
+if [ "${exists}" ]; then
+    echo "index.txt already contains (V)alid CN=${client_name}." 1>&2
+    exit 1
+fi
+
+set -e
+
+echo "Creating ${client_dir} ..."
+mkdir -p "$client_dir"
+
+echo "Generating ${client_key} ..."
+openssl genrsa -out "$client_key" 2048
+
+echo "Generating ${client_csr} ..."
+openssl req -new -nodes \
+    -days 365 \
+    -out "$client_csr" \
+    -key "$client_key" \
+    -subj "/C=DE/ST=Berlin/CN=$client_name/O=Zeta Project Germany GmbH" \
+    -config "$ssl_config"
+
+echo "Generating ${client_cert} ..."
+openssl ca -keyfile "$ca_key" \
+    -cert "$ca_cert" \
+    -in "$client_csr" \
+    -out "$client_cert" \
+    -config "$ssl_config" \
+    -batch

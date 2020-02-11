@@ -1,0 +1,77 @@
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+{% if iprule_table[khan_role] is defined %}
+{% if iprule_table[khan_role]['nat'] is defined %}
+# Custom {{ khan_role }} NAT rules
+{% for rule in iprule_table[khan_role]['nat'] %}
+{{ rule }}
+
+{% endfor %}
+{% endif %}
+{% endif %}
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Allow localhost
+-A INPUT -i lo -j ACCEPT
+
+# Allow established connections
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Allow SSH
+-A INPUT -m conntrack --ctstate NEW -m tcp -p tcp --dport 22 -j ACCEPT
+
+{% if routing_table[khan_role] is defined and routing_table[khan_role] %}
+# Allow HAProxy Stats
+-A INPUT -p udp -m udp --dport {{ ports.haproxy_stats }} -j ACCEPT
+{% for name, item in routing_table[khan_role].iteritems() %}
+{% if item.protocol == "udp" or item.protocol == "tcp" %}
+{%   set port_separator=':' %}
+{% else %}
+{%   set port_separator='/' %}
+{% endif %}
+{% if item.exposed_to is defined %}
+{%   set port_range = item.exposed ~ port_separator ~ item.exposed_to %}
+{% else %}
+{%   set port_range = item.exposed %}
+{% endif %}
+
+# Allow {{ khan_role }}:{{ name }}
+{% if item.protocol == "tcp" and item.exposed == 22 %}
+# skipping defined ssh rule, as we have one hardcoded in this file.
+{% elif item.protocol == "udp" or item.protocol == "tcp" %}
+-A INPUT -p {{ item.protocol }} -m {{ item.protocol }} --dport {{ port_range }} -j ACCEPT
+{% elif item.protocol == "icmp" %}
+-A INPUT -p icmp --icmp-type {{ port_range }} -j ACCEPT
+{% elif item.protocol == "http" or item.protocol == "https" %}
+-A INPUT -p tcp -m tcp --dport {{ port_range }} -j ACCEPT
+{% else %}
+# Cowardly skipping rule for protocol {{ item.protocol }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if iprule_table[khan_role] is defined %}
+{% if iprule_table[khan_role]['filter'] is defined %}
+
+# Custom {{ khan_role }} filter rules
+
+{% for rule in iprule_table[khan_role]['filter'] %}
+{{ rule }}
+
+{% endfor %}
+{% endif %}
+{% endif %}
+# Reject everything else
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+
+COMMIT

@@ -1,0 +1,88 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: enable docker apt repository
+  copy:
+    content: deb https://download.docker.com/linux/ubuntu bionic stable
+    dest: /etc/apt/sources.list.d/download.docker.com.sources.list
+    owner: root
+    mode: 0644
+    force: no
+  become: yes
+
+- name: import docker repo gpg key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  become: yes
+
+- name: update apt cache
+  apt: update_cache=yes
+  become: yes
+
+- name: install docker-ce
+  apt:
+   name: docker-ce
+  become: yes
+
+- name: enable use of docker by the ubuntu user
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+  become: yes
+
+- name: install docker-ce-cli
+  apt:
+   name: docker-ce-cli
+  become: yes
+
+- name: install containerd.io
+  apt:
+   name: containerd.io
+  become: yes
+
+- name: enable use of experimental docker features.
+  replace:
+    path: /lib/systemd/system/docker.service
+    regexp: 'ExecStart=/usr/bin/dockerd -H fd://'
+    replace: 'ExecStart=/usr/bin/dockerd -H fd:// --experimental=true'
+  become: yes
+
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: create offline content directory for docker generated .tar.gz files
+  file:
+    path: '{{ offline_content_dir }}/docker_repository'
+    state: directory
+
+- name: dump our groups, debugging code.
+  command: groups
+
+- name: download docker registry image into local docker.
+  command: docker pull --platform=amd64 registry:2
+
+- name: find the image ID of the docker registry image
+  command: bash -c "docker image ls registry:2 | grep registry | awk '{ print $3 }' " 
+  register: registry_image_id
+
+- name: serialize docker registry image into offline content directory.
+  command: bash -c "docker image save {{ registry_image_id.stdout }} | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/registry_2-{{ registry_image_id.stdout }}-amd64.tar.bz2" 
+
+- name: include our list of docker images to mirror
+  include_vars: 'group_vars/docker_images.yml'
+
+- name: pull down each docker image in our docker image list.
+  command: bash -c "docker pull --platform=amd64 {{ item.value.name }}:{{ item.value.tag }} ; docker image save $( docker image ls `echo {{ item.value.name }} | sed 's=^library/=='`:{{ item.value.tag }} | grep `echo {{ item.value.name }} | sed 's=^library/=='` | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | sed 's./.=.g' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image rm {{ item.value.name }}:{{ item.value.tag }}"
+  with_dict: "{{ docker_images }}"

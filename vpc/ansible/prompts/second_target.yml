@@ -1,0 +1,22 @@
+---
+- name: Select target
+  pause:
+    prompt: "what is the IP of the second target host?"
+  register: second_target
+
+- name: set fact from prompt
+  set_fact:
+    second_target_ip: '{{ second_target.user_input }}'
+
+- name: add second target behind bastion host
+  add_host:
+    name: '{{ second_target_eip }}'
+    groups: second_target_host
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ubuntu@{{ bastion_eip }}" -o StrictHostKeyChecking=no'
+  when: bastion_eip != ""
+
+- name: add second_target
+  add_host:
+    name: '{{ second_target_eip }}'
+    groups: second_target_host
+  when: bastion_eip == ""

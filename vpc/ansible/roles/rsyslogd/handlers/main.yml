@@ -1,0 +1,11 @@
+---
+
+- name: reload rsyslogd
+  shell: service rsyslog restart
+
+# code below not working, see https://github.com/ansible/ansible/issues/19422
+#- name: reload rsyslogd
+#  service:
+#    name: rsyslog
+#    state: restarted
+#    use: '{{ service_manager | default(omit) }}' # see roles/service_module_compat for details

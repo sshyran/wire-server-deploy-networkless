@@ -1,0 +1,3 @@
+---
+- name: regenerate resolv.conf
+  command: resolvconf -u

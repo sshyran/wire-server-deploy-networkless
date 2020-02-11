@@ -1,0 +1,50 @@
+---
+# Create and populate a debian style repository.
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements.
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Include Prompts
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: prompt for what infrastructure we're using.
+      import_tasks: prompts/vpc-or-kvm.yml
+      when: wdt_infra == 'prompt'
+    - name: prompt for what region we're deploying to.
+      import_tasks: prompts/region.yml
+      when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
+    - name: prompt for what environment we're deploying to.
+      import_tasks: prompts/environment.yml
+      when: wdt_env == 'prompt'
+    - name: prompt for the target IP. Must be reachable from the internet.
+      import_tasks: prompts/first_target.yml
+      vars:
+        label: bastion host
+
+- name: Create debian repo
+  hosts: first_target_host
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: create debian repo on remote target
+      include_tasks: populate_debian_repo-tasks.yml
+      when: uninstall is not defined
+
+- name: Destroy debian repo
+  hosts: first_target_host
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: destroy debian repo on remote target
+      include_tasks: populate_debian_repo-uninstall.yml
+      when: uninstall is defined

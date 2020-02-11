@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+export SYNOPSIS=<<EOF
+  Revoke a certificate and verify revocation.
+EOF
+
+usage() {
+    echo "Usage: $0 (-n NAME) $SYNOPSIS" 1>&2
+    exit 1
+}
+
+while getopts ":n:" opt; do
+    case "$opt" in
+        n)
+            cert_name=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+set -e
+
+source $(cd "$( dirname "$0" )" && pwd)/common.sh
+
+echo "Checking for existing certificate ${cert_name} ..."
+nr=`grep "CN=${cert_name}" "{{ vpn_ca_dir }}/index.txt" | grep "^V" | cut -f4`
+if [ ! "${nr}" ]; then
+    echo "No (V)alid certificate for CN=${cert_name}." 1>&2
+    exit 1
+fi
+
+echo "Revoking certificate ${cert_name} (${nr}) ..."
+openssl ca -revoke {{ vpn_ca_dir }}/newcerts/${nr}.pem -config "$ssl_config"
+
+echo "Updating CRL ..."
+openssl ca -gencrl -out {{ vpn_ca_dir }}/crl/crl.pem -config "$ssl_config"
+cp {{ vpn_ca_dir }}/crl/crl.pem /etc/openvpn/crl.pem
+
+echo "Verifying revocation ..."
+cat ${ca_cert} {{ vpn_ca_dir }}/crl/crl.pem > revoke-test.pem
+openssl verify -CAfile revoke-test.pem -crl_check {{ vpn_ca_dir }}/newcerts/${nr}.pem

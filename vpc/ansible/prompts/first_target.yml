@@ -1,0 +1,28 @@
+---
+- name: ensure label is set
+  set_fact: label='the first target host'
+  when: label is undefined
+
+- name: Select target
+  pause:
+    prompt: 'what is the IP of {{ label }}?'
+  register: first_target
+  when: first_target_ip is not defined
+
+- name: set fact from prompt
+  set_fact:
+    first_target_ip: '{{ first_target.user_input }}'
+  when: first_target_ip is not defined
+
+- name: add first target behind bastion host
+  add_host:
+    name: '{{ first_target_ip }}'
+    groups: first_target_host
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ubuntu@{{ bastion_eip }}" -o StrictHostKeyChecking=no -l ubuntu'
+  when: bastion_eip is defined
+
+- name: add first_target
+  add_host:
+    name: '{{ first_target_ip }}'
+    groups: first_target_host
+  when: bastion_eip is not defined

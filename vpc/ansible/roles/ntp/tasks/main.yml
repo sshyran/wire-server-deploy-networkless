@@ -1,0 +1,10 @@
+---
+- name: ensure ntpd is up and running
+  shell: service ntp start
+
+# code below not working, see https://github.com/ansible/ansible/issues/19422
+#  service:
+#    name: ntp
+#    state: started
+#    use: '{{ service_manager | default(omit) }}' # see roles/service_module_compat for details
+

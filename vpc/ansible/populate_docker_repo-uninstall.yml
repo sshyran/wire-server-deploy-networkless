@@ -1,0 +1,41 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: disable docker apt repository.
+  file:
+    path: /etc/sources.list.d/download.docker.com.sources.list
+    state: absent
+  become: yes
+
+- name: update apt cache
+  apt: update_cache=yes
+  become: yes
+
+- name: remove docker-ce
+  apt:
+   name: docker-ce
+   state: absent
+  become: yes
+
+- name: remove docker-ce-cli
+  apt:
+   name: docker-ce-cli
+   state: absent
+  become: yes
+
+- name: remove containerd.io
+  apt:
+   name: containerd.io
+   state: absent
+  become: yes
+
+- name: remove offlite content directory for docker generated .tar.gz files
+  file:
+    path: '{{ offline_content_dir }}/docker_repository'
+    state: absent

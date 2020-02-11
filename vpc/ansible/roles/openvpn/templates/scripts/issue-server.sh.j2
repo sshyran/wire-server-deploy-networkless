@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+export SYNOPSIS=<<EOF
+  Issue a server certificate.
+EOF
+
+usage() {
+    echo "Usage: $0 (-n NAME) $SYNOPSIS" 1>&2
+    exit 1
+}
+
+while getopts ":n:" opt; do
+    case "$opt" in
+        n)
+            server_name=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+source $(cd "$( dirname "$0" )" && pwd)/common.sh
+
+exists=`grep "CN=${server_name}" "{{ vpn_ca_dir }}/index.txt" | grep "^V"`
+if [ "${exists}" ]; then
+    echo "index.txt already contains (V)alid CN=${server_name}." 1>&2
+    exit 1
+fi
+
+set -e
+
+server_key="{{ vpn_ca_dir }}/certs/${server_name}.key"
+server_csr="{{ vpn_ca_dir }}/certs/${server_name}.csr"
+server_cert="{{ vpn_ca_dir }}/certs/${server_name}.pem"
+
+if [ ! -f /root/.rnd ] ; then
+    echo "creating .rnd cache in root's home directory."
+    touch /root/.rnd
+    chmod 600 /root/.rnd
+fi
+
+echo "Generating ${server_key}..."
+openssl genrsa -out "$server_key" 2048
+error=$?
+if [ $error -ne 0 ]; then
+   echo "Error: OpenSSL returned $error when generating server key."
+   exit $error
+fi
+
+echo "Generating ${server_csr}..."
+openssl req -new -nodes \
+    -out "$server_csr" \
+    -key "$server_key" \
+    -subj "/C=DE/ST=Berlin/CN=$server_name/O=Zeta Project Germany GmbH" \
+    -config "$ssl_config" \
+    -extensions server
+error=$?
+if [ $error -ne 0 ]; then
+   echo "Error: OpenSSL returned $error when generating server certificate signing request."
+   exit $error
+fi
+
+echo "Generating ${server_cert}..."
+openssl ca -keyfile "$ca_key" \
+    -cert "$ca_cert" \
+    -in "$server_csr" \
+    -out "$server_cert" \
+    -config "$ssl_config" \
+    -days 2190 \
+    -batch \
+    -extensions server
+error=$?
+if [ $error -ne 0 ]; then
+   echo "Error: OpenSSL returned $error when generating server certificate."
+   exit $error
+fi

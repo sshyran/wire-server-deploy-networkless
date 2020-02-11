@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+export SYNOPSIS=<<EOF
+  Generate multi-platform client configuration.
+EOF
+
+source $(cd "$( dirname "$0" )" && pwd)/common-client.sh
+
+if [ ! -e ${client_dir} ]; then
+    echo "${client_dir} doesn't exist. Issue a client certificate first." 1>&2
+    exit 1
+fi
+
+echo "Creating temporary directory ..."
+tmp_dir=$(mktemp -d)
+trap "echo Removing $tmp_dir; rm -rf $tmp_dir" EXIT
+
+set -e
+
+tar_dir="${tmp_dir}/${client_name}-vpn-config"
+tar_file="${client_dir}/${client_name}-{{ wdt_region_abbrev }}-vpn-config.tgz"
+
+generate_config() {
+    local dir="$1"
+    local config="${dir}/$2"
+
+    echo "Copying keys to ${dir} ..."
+    mkdir -p "$dir"
+    cp "$client_key" "$client_cert" "$ca_cert" "$tls_key" "${dir}/"
+
+    echo "Generating ${config} ..."
+cat <<EOF > "$config"
+client
+dev tun
+proto {{ routing_table.vpn.tunnel.protocol }}
+remote {{ wdt_region_abbrev }}-{{ vpn_primary_name }}.{{ vpn_domain }} {{ routing_table.vpn.tunnel.exposed }}
+remote {{ wdt_region_abbrev }}-{{ vpn_secondary_name }}.{{ vpn_domain }} {{ routing_table.vpn.tunnel.exposed }}
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+remote-cert-tls server
+ca cacert.pem
+cert ${client_name}.pem
+key ${client_name}.key
+tls-auth ta.key 1
+cipher AES-256-CBC
+verb 3
+EOF
+}
+
+echo "Creating generic configuration ..."
+generate_config "${tar_dir}" \
+    "${client_name}.ovpn"
+
+echo "Creating linux configuration ..."
+generate_config "${tar_dir}" \
+    "${client_name}.conf"
+
+echo "Creating OSX configuration ..."
+generate_config "${tar_dir}/Zeta-{{ wdt_region_abbrev|upper }}.tblk/Contents/Resources" \
+    "config.ovpn"
+
+echo "Compressing ${tar_file} ..."
+tar -czf "$tar_file" -C "$(dirname $tar_dir)" "$(basename $tar_dir)"

@@ -1,0 +1,206 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: create /etc/sources.list.d
+  file:
+    path: /etc/sources.list.d/
+    state: directory
+  become: yes
+
+- name: enable ubuntu universe repository
+  copy:
+    content: deb http://archive.ubuntu.com/ubuntu/ xenial universe
+    dest: /etc/sources.list.d/ubuntu_universe.sources.list
+    owner: root
+    mode: 0644
+    force: no
+  become: yes
+
+- name: update apt cache
+  apt: update_cache=yes
+  become: yes
+
+- name: install fai-server
+  apt:
+   name: fai-server
+  become: yes
+
+- name: install reprepro
+  apt:
+   name: reprepro
+  become: yes
+
+- name: install aptitude
+  apt:
+   name: aptitude
+  become: yes
+
+- name: create offline content directory for debian packages
+  file:
+    path: '{{ offline_content_dir }}/apt_repository/aptcache/etc/apt/trusted.gpg.d/'
+    state: directory
+
+- name: create fai configuration directories
+  file:
+    path: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d'
+    state: directory
+
+- name: create fai package configuration directories
+  file:
+    path: '{{ offline_config_dir }}/fai_config/package_config'
+    state: directory
+
+- name: create empty fai.conf
+  file:
+    path: '{{ offline_config_dir }}/fai_etc/fai.conf'
+    state: touch
+
+- name: create minimal nfsroot.conf
+  copy:
+    dest: '{{ offline_config_dir }}/fai_etc/nfsroot.conf'
+    content: |
+      FAI_DEBOOTSTRAP="bionic http://archive.ubuntu.com/ubuntu"
+      FAI_CONFIGDIR={{ offline_config_dir }}/fai_config
+
+- name: enable ubuntu main repository
+  copy:
+    content: |
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic main restricted
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic-updates main restricted
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic universe
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic-updates universe
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic multiverse
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic-updates multiverse
+      deb http://eu-central-1.ec2.archive.ubuntu.com/ubuntu/ bionic-backports main restricted universe multiverse
+      deb http://security.ubuntu.com/ubuntu bionic-security main restricted
+      deb http://security.ubuntu.com/ubuntu bionic-security universe
+      deb http://security.ubuntu.com/ubuntu bionic-security multiverse
+    dest: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d/ubuntu_main.sources.list'
+
+- name: add docker repository to fai repo list.
+  copy:
+    dest: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d/docker.sources.list'
+    content: deb https://download.docker.com/linux/ubuntu/ bionic stable
+
+- name: import gpg key for ubuntu
+  apt_key:
+    id:  3B4FE6ACC0B21F32
+    keyserver: 'hkp://keyserver.ubuntu.com:80'
+    state: present
+  become: yes
+
+- name: import docker repo gpg key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  become: yes
+
+- name: add package config for assethost
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/assethost'
+    content: |
+      PACKAGES aptitude-r
+      isc-dhcp-server dnsmasq
+
+- name: add package config for raw content delivery
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/raw-content-delivery'
+    content: |
+      PACKAGES aptitude-r
+      apache2
+
+- name: add package config for poetry
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/poetry'
+    content: |
+      PACKAGES aptitude-r
+      python2.7 python-pip
+
+- name: add package config for our golden image process
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/goldenimage'
+    content: |
+      PACKAGES aptitude-r
+      gdebi-core ngrep ntp plymouth-disabler sysstat tree nload resolvconf
+
+- name: add package config for emacs
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/emacs'
+    content: |
+      PACKAGES aptitude-r
+      emacs25-nox
+
+- name: add package config for ansible
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/ansible'
+    content: |
+      PACKAGES aptitude-r
+      sshpass
+
+- name: add package config for unarchive-deps
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/unarchive-deps'
+    content: |
+      PACKAGES aptitude-r
+      python-apt
+
+- name: add package config for kubernetes
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/kubernetes'
+    content: |
+      PACKAGES aptitude-r
+      aufs-tools python-httplib2 socat unzip ipvsadm pigz cgroupfs-mount
+      libltdl7 containerd.io docker-ce-cli docker-ce
+
+- name: modify fai-mirror (Codename)
+  replace:
+    path: /usr/bin/fai-mirror
+    regexp: 'Codename: .*$'
+    replace: 'Codename: bionic'
+  become: yes
+
+- name: modify fai-mirror (Components)
+  replace:
+    path: /usr/bin/fai-mirror
+    regexp: 'Components: .*$'
+    replace: 'Components: stable'
+  become: yes
+
+- name: modify fai-mirror (includedeb)
+  replace:
+    path: /usr/bin/fai-mirror
+    regexp: 'includedeb cskoeln '
+    replace: 'includedeb bionic '
+  become: yes
+
+- name: copy gpg trusted key file from host OS
+  copy:
+    dest: '{{ offline_content_dir }}/apt_repository/aptcache/etc/apt/'
+    remote_src: yes
+    src: /etc/apt/trusted.gpg
+
+- name: locate trusted.gpg.d contents
+  find:
+    paths: /etc/apt/trusted.gpg.d/
+  register: trusted_gpg_d
+
+- name: copy gpg trusted keys from host OS
+  copy:
+    dest: '{{ offline_content_dir }}/apt_repository/aptcache/etc/apt/trusted.gpg.d'
+    remote_src: yes
+    src: '{{ item.path }}'
+  with_items: '{{ trusted_gpg_d.files }}'
+
+- name: ensure reprepro can be re-run.
+  file:
+    path: '{{ offline_content_dir }}/apt_repository/conf'
+    state: absent
+
+- name: populate the apt repository
+  command: 'fai-mirror -v -b -a amd64 -C {{ offline_config_dir }}/fai_etc {{ offline_content_dir }}/apt_repository'

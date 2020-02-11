@@ -1,0 +1,19 @@
+---
+
+### Define the following variables when using this role
+
+#package_name:
+
+###
+
+package_version: "{{ (packages[package_name]|default({'version':'latest'})).version }}"
+package_arch: amd64
+
+package_owner: root
+package_group: root
+
+# How long to cache results from apt-get update
+package_apt_cache_time: 43200
+
+# apt repository
+package_repo: ''

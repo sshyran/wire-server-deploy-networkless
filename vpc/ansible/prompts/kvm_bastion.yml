@@ -1,0 +1,14 @@
+---
+
+# FIXME: use ec2_instance_facts to detect the bastion host for an environment in a VPC.
+
+- name: Select bastion host
+  pause:
+    prompt: "what is the IP of the bastion host to use (if applicable)?"
+  register: bastion
+
+- name: set fact from prompt
+  set_fact:
+    bastion_ip: '{{ bastion.user_input }}'
+
+

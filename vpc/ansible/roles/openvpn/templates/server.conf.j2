@@ -1,0 +1,51 @@
+# Server
+local {{ external_ip }}
+port {{ routing_table.vpn.tunnel.exposed }}
+proto {{ routing_table.vpn.tunnel.protocol }}
+
+user nobody
+group nogroup
+
+# Tunneling
+dev tun
+topology net30
+
+# State Persistence (over restarts)
+persist-tun
+persist-key
+
+# Certificates and Encryption
+cert {{ vpn_ca_dir }}/certs/{{ vpn_server_name }}.pem
+key {{ vpn_ca_dir }}/certs/{{ vpn_server_name }}.key
+ca {{ vpn_ca_dir }}/cacert.pem
+dh {{ vpn_ca_dir }}/dh{{ dh_keylength }}.pem
+
+tls-auth {{ vpn_ca_dir }}/ta.key 0
+cipher AES-256-CBC
+
+# DHCP Range
+{% for server in vpn_routing.dhcp.server %}
+server {{ server }}
+{% endfor %}
+
+{% for route in vpn_routing.dhcp.route %}
+route {{ route }}
+{% endfor %}
+
+{% for push in vpn_routing.dhcp.push %}
+push "{{ push }}"
+{% endfor %}
+
+ifconfig-pool-persist ipp.txt
+
+# Client Configuration
+client-config-dir ccd
+ccd-exclusive
+crl-verify {{ vpn_ca_dir }}/crl/crl.pem
+
+# Keepalive
+keepalive 10 120
+
+# Logging
+status /var/log/openvpn.log
+verb 4

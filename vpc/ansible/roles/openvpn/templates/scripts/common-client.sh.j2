@@ -1,0 +1,30 @@
+usage() {
+    echo "Usage: $0 (-n NAME) $SYNOPSIS" 1>&2
+    exit 1
+}
+
+while getopts ":n:" opt; do
+    case "$opt" in
+        n)
+            client_name=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+client_name=${client_name// /}
+
+if [ -z "$client_name" ]; then
+    usage
+fi
+
+source $(cd "$( dirname "$0" )" && pwd)/common.sh
+
+client_certs="{{ vpn_ca_dir }}/clientcerts"
+client_dir="${client_certs}/$client_name"
+client_file="${client_dir}/$client_name"
+client_key="${client_file}.key"
+client_csr="${client_file}.csr"
+client_cert="${client_file}.pem"

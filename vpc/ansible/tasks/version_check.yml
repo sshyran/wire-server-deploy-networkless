@@ -1,0 +1,11 @@
+- name: Verify Ansible meets version requirements.
+  assert:
+    that: "{{ ansible_version.full | version_compare(ansible_min_version, '>=') }}"
+    msg: "You must update Ansible to at least {{ ansible_min_version }} to run this playbook."
+  when: ansible_min_version is defined
+
+- name: Verify Ansible meets upper version requirements.
+  assert:
+    that: "{{ ansible_version.full | version_compare(ansible_max_version, '<') }}"
+    msg: "You must use a version of ansible lower than {{ ansible_max_version }} to run this playbook, {{ ansible_max_version }} and later are not yet supported."
+  when: ansible_max_version is defined

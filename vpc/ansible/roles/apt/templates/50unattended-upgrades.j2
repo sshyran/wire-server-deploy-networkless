@@ -1,0 +1,19 @@
+// Automatically upgrade packages from these (origin:archive) pairs
+Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}-security";
+};
+
+// List of packages to not update
+Unattended-Upgrade::Package-Blacklist {
+{% for name in unattended_blacklist %}
+        "{{ name }}";
+{% endfor %}
+};
+
+// Do automatic removal of new unused dependencies after the upgrade
+// (equivalent to apt-get autoremove)
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+// Automatically reboot *WITHOUT CONFIRMATION* if a
+// the file /var/run/reboot-required is found after the upgrade
+Unattended-Upgrade::Automatic-Reboot "false";

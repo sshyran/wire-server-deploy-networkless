@@ -1,0 +1,15 @@
+---
+# the ugly or (||) syntax is for compatiblity with ansible 2.2 and both ubuntu 14.04 and 18.04
+# FUTUREWORK: use the service module once ubuntu has been upgraded to >=16.04 and ansible has been upgraded to 2.7 or later.
+- name: restart iptables-persistent
+  shell: service iptables-persistent restart || netfilter-persistent restart
+
+- name: start iptables-persistent
+  shell: service iptables-persistent start || netfilter-persistent start
+
+# code below not working, see https://github.com/ansible/ansible/issues/19422
+#- name: restart iptables-persistent
+#  service:
+#    name: iptables-persistent
+#    state: restarted
+#    use: '{{ service_manager | default(omit) }}' # see roles/service_module_compat for details
