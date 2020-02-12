@@ -118,7 +118,8 @@
 
 - name: get a list of docker images to load into docker
   find:
-    paths: '{{ offline_content_dir }}/docker_repository/*'
+    paths: '{{ offline_content_dir }}/docker_repository/'
+    patterns: "*.bz2"
   register: docker_images
 
 - name: import docker images
