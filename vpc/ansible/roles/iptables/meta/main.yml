@@ -1,5 +1,0 @@
----
-dependencies:
-  - role: service_module_compat
-  - role: package
-    package_name: iptables-persistent
