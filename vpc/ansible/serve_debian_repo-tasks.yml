@@ -63,7 +63,7 @@
     state: link
   become: yes
 
-- name: restart apache.
+- name: restart apache
   systemd:
     name: apache2
     state: restarted

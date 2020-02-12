@@ -49,20 +49,20 @@
   args:
     chdir: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}'
 
-- name: create directory for private keys.
+- name: create directory for private keys
   file:
     path: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/private'
     state: directory
 
-- name: ensure apache is happy with its configuration.
+- name: ensure apache is happy with its configuration
   command: apachectl configtest
   become: yes
 
-- name: prepare apache to serve SSL content.
+- name: prepare apache to serve SSL content
   command: a2enmod ssl
   become: yes
 
-- name: disable apache default SSL site.
+- name: disable apache default SSL site
   command: a2dissite default-ssl
   become: yes
 

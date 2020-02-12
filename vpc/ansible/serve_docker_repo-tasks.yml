@@ -37,7 +37,7 @@
     append: yes
   become: yes
 
-- name: enable use of experimental docker features.
+- name: enable use of experimental docker features
   replace:
     path: /lib/systemd/system/docker.service
     regexp: 'ExecStart=/usr/bin/dockerd -H fd://'
@@ -54,7 +54,7 @@
 - name: dump groups, debugging
   command: groups
 
-- name: restore docker registry image from offline content directory.
+- name: restore docker registry image from offline content directory
   command: bash -c "cat {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2 | bzip2 -c -d | docker image load"
   register: docker_load_out
 
@@ -99,13 +99,13 @@
 - name: 'create certificate for docker.{{ fake_domain }} (3 of 3)'
   command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/docker.{{ fake_domain }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/docker.{{ fake_domain }}.pem -days 500 -sha256'
 
-- name: copy docker.{{ fake_domain }} certificate to where the registry wants it.
+- name: 'copy docker.{{ fake_domain }} certificate to where the registry wants it'
   copy:
     dest: '{{ offline_delivery_dir }}/docker-registry/certs/client.crt'
     src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/docker.{{ fake_domain }}.pem'
     remote_src: yes
 
-- name: copy docker.{{ fake_domain }} key to where the registry wants it.
+- name: 'copy docker.{{ fake_domain }} key to where the registry wants it'
   copy:
     dest: '{{ offline_delivery_dir }}/docker-registry/certs/client.key'
     src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key'
@@ -116,7 +116,7 @@
   args:
     chdir: '{{ offline_delivery_dir }}/docker-registry/'
 
-- name: get a list of docker images to load into docker.
+- name: get a list of docker images to load into docker
   find:
     paths: '{{ offline_content_dir }}/docker_repository/*'
   register: docker_images

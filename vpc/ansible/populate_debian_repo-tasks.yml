@@ -83,7 +83,7 @@
       deb http://security.ubuntu.com/ubuntu bionic-security multiverse
     dest: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d/ubuntu_main.sources.list'
 
-- name: add docker repository to fai repo list.
+- name: add docker repository to fai repo list
   copy:
     dest: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d/docker.sources.list'
     content: deb https://download.docker.com/linux/ubuntu/ bionic stable
@@ -197,7 +197,7 @@
     src: '{{ item.path }}'
   with_items: '{{ trusted_gpg_d.files }}'
 
-- name: ensure reprepro can be re-run.
+- name: ensure reprepro can be re-run
   file:
     path: '{{ offline_content_dir }}/apt_repository/conf'
     state: absent

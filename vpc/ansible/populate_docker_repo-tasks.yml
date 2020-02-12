@@ -48,7 +48,7 @@
    name: containerd.io
   become: yes
 
-- name: enable use of experimental docker features.
+- name: enable use of experimental docker features
   replace:
     path: /lib/systemd/system/docker.service
     regexp: 'ExecStart=/usr/bin/dockerd -H fd://'
@@ -67,22 +67,22 @@
     path: '{{ offline_content_dir }}/docker_repository'
     state: directory
 
-- name: dump our groups, debugging code.
+- name: dump our groups, debugging code
   command: groups
 
-- name: download docker registry image into local docker.
+- name: download docker registry image into local docker
   command: docker pull --platform=amd64 registry:2
 
 - name: find the image ID of the docker registry image
   command: bash -c "docker image ls registry:2 | grep registry | awk '{ print $3 }' " 
   register: registry_image_id
 
-- name: serialize docker registry image into offline content directory.
-  command: bash -c "docker image save {{ registry_image_id.stdout }} | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2" 
+- name: serialize docker registry image into offline content directory
+  command: bash -c "docker image save {{ registry_image_id.stdout }} | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2"
 
 - name: include our list of docker images to mirror
   include_vars: 'group_vars/docker_images.yml'
 
-- name: pull down each docker image in our docker image list.
+- name: pull down each docker image in our docker image list
   command: bash -c "docker pull --platform=amd64 {{ item.value.name }}:{{ item.value.tag }} ; docker image save $( docker image ls `echo {{ item.value.name }} | sed 's=^library/=='`:{{ item.value.tag }} | grep `echo {{ item.value.name }} | sed 's=^library/=='` | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | sed 's./.=.g' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image rm {{ item.value.name }}:{{ item.value.tag }}"
   with_dict: "{{ docker_images }}"

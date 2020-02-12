@@ -3,7 +3,7 @@
   gather_facts: no
   become: no
   tasks:
-    - name: Verify Ansible version meets this playbook's requirements.
+    - name: Verify Ansible version meets this playbook's requirements
       include: tasks/version_check.yml
       vars:
         ansible_min_version: 2.7.0
@@ -15,21 +15,21 @@
   gather_facts: no
   become: no
   tasks:
-    - name: prompt for what infrastructure we're using.
+    - name: prompt for what infrastructure we're using
       import_tasks: prompts/vpc-or-kvm.yml
       when: wdt_infra == 'prompt'
-    - name: prompt for what region we're deploying to.
+    - name: prompt for what region we're deploying to
       import_tasks: prompts/region.yml
       when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
-    - name: prompt for what environment we're deploying to.
+    - name: prompt for what environment we're deploying to
       import_tasks: prompts/environment.yml
       when: wdt_env == 'prompt'
-    - name: prompt for the bastion host, if needed.
+    - name: prompt for the bastion host, if needed
       import_tasks: prompts/vpc_bastion.yml
       vars:
         agent: true
       when: wdt_infra == 'vpc'
-    - name: prompt for the bastion host, if needed.
+    - name: prompt for the bastion host, if needed
       import_tasks: prompts/kvm_bastion.yml
       vars:
         agent: true
@@ -39,7 +39,7 @@
       vars:
         label: the target asset host
 
-- name: Ensure offline contentdirectory exists.
+- name: Ensure offline content directory exists
   hosts: first_target_host
   gather_facts: no
   become: no
