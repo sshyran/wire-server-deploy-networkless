@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Wire
+  description: golden_image
+  company: Wire
+  license: AGPL
+  min_ansible_version: 2.2
+  github_branch: master
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - 14.04
+
+  galaxy_tags: []
+
+dependencies: []
+

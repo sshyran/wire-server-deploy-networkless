@@ -1,0 +1,12 @@
+# Requirements file is used to keep track of ansible role origins and versions.
+# Files are downloaded to `./roles-external`. Do not edit those directly.
+#
+# See https://docs.ansible.com/ansible/galaxy.html#installing-multiple-roles-from-a-file
+#
+# To update existing roles: ( --force overrides existing folders)
+#
+#   ansible-galaxy install -r roles-external/requirements.yml --force
+
+- src: git+https://github.com/wireapp/ansible-golden_image.git
+  name: golden_image
+  version: v0.1.0
