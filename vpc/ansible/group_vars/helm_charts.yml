@@ -1,0 +1,29 @@
+helm_charts:
+  cassandra-external:
+    name: wire-release/cassandra-external
+  elasticsearch-external:
+    name: wire-release/elasticsearch-external
+  minio-external:
+    name: wire-release/minio-external
+  databases-ephemeral:
+    name: wire-release/databases-ephemeral
+  demo-smtp:
+    name: wire-release/demo-smtp
+  fake-aws:
+    name: wire-release/fake-aws
+  reaper:
+    name: wire-release/reaper
+  wire-server:
+    name: wire-release/wire-server
+  nginx-ingress-controller:
+    name: wire-release/nginx-ingress-controller
+  nginx-ingress-services:
+    name: wire-release/nginx-ingress-services
+  fluent-bit:
+    name: wire-release/fluent-bit
+  kibana:
+    name: wire-release/kibana
+  wire-server-metrics:
+    name: wire-release/wire-server-metrics
+  backoffice:
+    name: wire-release/backoffice
