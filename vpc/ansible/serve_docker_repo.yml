@@ -44,7 +44,8 @@
   remote_user: ubuntu
   tasks:
     - name: Setup docker to serve content on remote target
-      include_tasks: serve_docker_repo-tasks.yml
+      include_role:
+        name: serve_docker_repo
       when: uninstall is not defined
       vars:
         fake_domain: '{{ dns_domain }}'

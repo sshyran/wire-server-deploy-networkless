@@ -58,6 +58,8 @@
     - name: ensure offline_content_dir is set
       set_fact: offline_content_dir='/home/ubuntu/offline_content/'
       when: offline_content_dir is undefined
+    - name: reset our SSH connection
+      meta: reset_connection
     - name: show ssh keys
       command: 'ssh-add -l'
     - name: rsync offline content to asset host

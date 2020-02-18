@@ -51,6 +51,9 @@
     daemon_reload: yes
   become: yes
 
+- name: reset SSH connections
+  meta: reset_connection
+
 - name: dump groups, debugging
   command: groups
 
