@@ -49,7 +49,8 @@
       vars:
         fake_domain: '{{ dns_domain }}'
     - name: Configure apache to serve debian mirror content on remote target
-      include_tasks: serve_debian_repo-tasks.yml
+      include_role:
+        name: serve_debian_repo
       when: uninstall is not defined
       vars:
         fake_domain: '{{ dns_domain }}'
@@ -60,5 +61,7 @@
   remote_user: ubuntu
   tasks:
     - name: remove apache from remote target
-      include_tasks: serve_debian_repo-uninstall.yml
+      include_role:
+        name: serve_debian_repo
+        tasks_from: uninstall
       when: uninstall is defined
