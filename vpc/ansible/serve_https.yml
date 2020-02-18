@@ -38,25 +38,25 @@
       import_tasks: prompts/fake_domain.yml
       when: fake_domain is not defined
 
-- name: Prepare to serve debian content
+- name: Prepare to serve http / https content
   hosts: first_target_host
   gather_facts: no
   remote_user: ubuntu
   tasks:
-    - name:  install apache on remote host
+    - name: Setup apache to serve HTTPS on remote target
       include_role:
-        name: serve_debian_repo
+        name: serve_https
       when: uninstall is not defined
       vars:
         fake_domain: '{{ dns_domain }}'
 
-- name: Stop serving debian content
+- name: Stop serving http / https content
   hosts: first_target_host
   gather_facts: no
   remote_user: ubuntu
   tasks:
     - name: remove apache from remote target
       include_role:
-        name: serve_debian_repo
+        name: serve_https
         tasks_from: uninstall
       when: uninstall is defined
