@@ -1,0 +1,72 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: change permissions on debian repo, for serving via http/https
+  file:
+    path: '{{ offline_content_dir }}/apt_repository'
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+  become: yes
+
+- name: create apache configuration
+  copy:
+    dest: '{{ offline_delivery_dir }}/apache/sites/000-apt.{{ fake_domain }}.conf'
+    remote_src: yes
+    src: '/etc/apache2/sites-available/default-ssl.conf'
+
+- name: 'create certificate for apt.{{ fake_domain }} (1 of 3)'
+  command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/apt.{{ fake_domain }}.key 2048'
+
+- name: 'create certificate for apt.{{ fake_domain }} (2 of 3)'
+  command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/apt.{{ fake_domain }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/apt.{{ fake_domain }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN=apt.{{ fake_domain }}"'
+
+- name: 'create certificate for apt.{{ fake_domain }} (3 of 3)'
+  command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/apt.{{ fake_domain }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/apt.{{ fake_domain }}.pem -days 500 -sha256'
+
+- name: modify apache configuration to refer to proper ssl certs (1 of 2)
+  replace:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-apt.{{ fake_domain }}.conf'
+    regexp: 'SSLCertificateFile.*'
+    replace: 'SSLCertificateFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/apt.{{ fake_domain }}.pem'
+
+- name: modify apache configuration to refer to proper ssl certs (2 of 2)
+  replace:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-apt.{{ fake_domain }}.conf'
+    regexp: 'SSLCertificateKeyFile.*'
+    replace: 'SSLCertificateKeyFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/apt.{{ fake_domain }}.key'
+
+- name: modify apache configuration to serve the apt repository
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-apt.{{ fake_domain }}.conf'
+    block: |
+      ServerName apt.{{ fake_domain }}
+      HostnameLookups Off
+      alias /apt {{ offline_content_dir }}/apt_repository/
+      <Directory {{ offline_content_dir }}/apt_repository/>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+
+- name: 'enable apache configuration for apt.{{ fake_domain }}'
+  file:
+    src: '{{ offline_delivery_dir }}/apache/sites/000-apt.{{ fake_domain }}.conf'
+    dest: '/etc/apache2/sites-enabled/000-apt.{{ fake_domain }}.conf'
+    state: link
+  become: yes
+
+- name: restart apache
+  systemd:
+    name: apache2
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
