@@ -9,4 +9,4 @@
 
 - src: git+https://github.com/wireapp/ansible-golden_image.git
   name: golden_image
-  version: v0.1.0
+  version: v0.1.1
