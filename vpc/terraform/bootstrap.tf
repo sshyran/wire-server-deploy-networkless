@@ -179,7 +179,7 @@ resource "aws_security_group" "world_web_out" {
   }
 }
 
-# A security group for ssh connections inside the VPC. should be added to the admin and bastion hosts only.
+# A security group for making ssh connections inside the VPC. should be added to the admin and bastion hosts only.
 resource "aws_security_group" "vpc_ssh_from" {
   name        = "vpc_ssh_from"
   description = "hosts that are allowed to ssh into other hosts"
@@ -197,7 +197,7 @@ resource "aws_security_group" "vpc_ssh_from" {
   }
 }
 
-# A security group for ssh connections inside the VPC. should be added to the admin and bastion hosts only.
+# A security group for recieving ssh connections inside the VPC. should be added to the admin and bastion hosts only.
 resource "aws_security_group" "has_ssh" {
   name        = "has_ssh"
   description = "hosts that should be reachable via SSH."
@@ -212,6 +212,104 @@ resource "aws_security_group" "has_ssh" {
 
   tags = {
     Name = "has_ssh"
+  }
+}
+
+# A security group for making dns requests inside the VPC. should be added to the admin, ansible, and kubernetes nodes.
+resource "aws_security_group" "vpc_dns_from" {
+  name        = "vpc_dns_from"
+  description = "hosts that are allowed to perform DNS requests"
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+  }
+
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["172.17.0.0/20"]
+  }
+
+  tags = {
+    Name = "vpc_dns_from"
+  }
+}
+
+# A security group for recieving DNS requests inside the VPC. should be added to the assethost only.
+resource "aws_security_group" "has_dns" {
+  name        = "has_dns"
+  description = "hosts that serve DNS."
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    security_groups = ["${aws_security_group.vpc_dns_from.id}"]
+  }
+
+  ingress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    security_groups = ["${aws_security_group.vpc_dns_from.id}"]
+  }
+
+  tags = {
+    Name = "has_dns"
+  }
+}
+
+# A security group for making http/https connections inside the VPC. should be added to the admin, ansible, and kubernetes hosts only.
+resource "aws_security_group" "vpc_https_from" {
+  name        = "vpc_https_from"
+  description = "hosts that are allowed to download content from the assethost"
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+    }
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+    }
+
+  tags = {
+    Name = "vpc_https_from"
+  }
+}
+
+# A security group for receiving http/https connections inside the VPC. should be added to the asset host only.
+resource "aws_security_group" "has_https" {
+  name        = "has_https"
+  description = "hosts that should be accessable via http. should be only the assethost."
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = ["${aws_security_group.vpc_ssh_from.id}"]
+    }
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    security_groups = ["${aws_security_group.vpc_ssh_from.id}"]
+    }
+
+  tags = {
+    Name = "has_https"
   }
 }
 
@@ -246,6 +344,8 @@ resource "aws_instance" "admin-offline" {
   }
   vpc_security_group_ids = [
     "${aws_security_group.vpc_ssh_from.id}",
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
     "${aws_security_group.has_ssh.id}"
     ]
 }
@@ -262,6 +362,8 @@ resource "aws_instance" "vpn-offline" {
       Role = "vpn"
   }
   vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
     "${aws_security_group.has_ssh.id}"
     ]
 }
@@ -281,7 +383,9 @@ resource "aws_instance" "assethost-offline" {
       Role = "terminator"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.has_ssh.id}"
+    "${aws_security_group.has_ssh.id}",
+    "${aws_security_group.has_dns.id}",
+    "${aws_security_group.has_https.id}"
     ]
 }
 
