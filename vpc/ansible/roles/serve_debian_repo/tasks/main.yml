@@ -7,6 +7,16 @@
   set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
   when: offline_delivery_dir is undefined
 
+- name: ensure assethost_ip is given.
+  fail:
+    msg: 'assethost_ip must be set'
+  when: assethost_ip is undefined
+
+- name: ensure fake_domain is given.
+  fail:
+    msg: 'fake_domain must be set'
+  when: fake_domain is undefined
+
 - name: change permissions on debian repo, for serving via http/https
   file:
     path: '{{ offline_content_dir }}/apt_repository'
@@ -49,8 +59,8 @@
     block: |
       ServerName apt.{{ fake_domain }}
       HostnameLookups Off
-      alias /apt {{ offline_content_dir }}/apt_repository/
-      <Directory {{ offline_content_dir }}/apt_repository/>
+      alias /apt {{ offline_content_dir }}/apt_repository
+      <Directory {{ offline_content_dir }}/apt_repository>
       Options Indexes FollowSymLinks MultiViews
       Require all granted
       </Directory>
@@ -70,3 +80,13 @@
     daemon_reload: yes
   become: yes
 
+- name: 'add DNS entry for apt.{{ fake_domain }}'
+  command: bash -c 'echo "address=/apt.{{ fake_domain }}/{{ assethost_ip }}" > {{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/apt.{{ fake_domain }}'
+  creates: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/apt.{{ fake_domain }}'
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes
