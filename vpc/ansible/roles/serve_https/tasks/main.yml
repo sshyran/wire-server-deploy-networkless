@@ -66,3 +66,16 @@
   command: a2dissite default-ssl
   become: yes
 
+- name: restart apache
+  systemd:
+    name: apache2
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: copy CA certificate
+  copy:
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt'
+    dest: '/var/www/html/{{ fake_domain }}.crt'
+    remote_src: yes
+  become: yes
