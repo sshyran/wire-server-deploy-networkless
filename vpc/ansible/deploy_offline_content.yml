@@ -60,8 +60,6 @@
       when: offline_content_dir is undefined
     - name: reset our SSH connection
       meta: reset_connection
-    - name: show ssh keys
-      command: 'ssh-add -l'
     - name: rsync offline content to asset host
       command: |
        bash -c 'rsync -e "ssh -A -o StrictHostKeyChecking=no" -avrSPX {{ offline_content_dir }}/* ubuntu@{{ first_target_ip }}:{{ offline_content_dir }}'
