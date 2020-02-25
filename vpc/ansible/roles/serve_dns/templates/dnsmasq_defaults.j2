@@ -1,0 +1,19 @@
+# Default configurations for DNSMASQ running on an assethost.
+
+# Ignore the contents of /etc/hosts
+no-hosts
+
+# Ignore the contents of /etc/resolv.conf
+no-resolv
+
+# The address we want to listen to for DNS requests.
+listen-address={{ assethost_ip }}
+
+# Do not serve DHCP.
+no-dhcp-interface={{ assethost_ip }}
+
+# Only bind to the address we have specified.
+bind-interfaces
+
+# Log every DNS query we reply to.
+log-queries

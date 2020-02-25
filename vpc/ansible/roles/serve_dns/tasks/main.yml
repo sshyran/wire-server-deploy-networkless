@@ -1,0 +1,58 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: ensure assethost_ip is given.
+  fail:
+    msg: 'assethost_ip must be set'
+  when: assethost_ip is undefined
+
+- name: ensure fake_domain is given.
+  fail:
+    msg: 'fake_domain must be set'
+  when: fake_domain is undefined
+
+- name: Install DNSMASQ
+  apt:
+    name: dnsmasq
+  become: yes
+
+- name: create directory for dnsmasq configuration
+  file:
+    path: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d'
+    state: directory
+
+- name: Install DNSMASQ default configurations
+  template:
+    src: dnsmasq_defaults.j2
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/default'
+    
+- name: make DNSMASQ use resolve configuration from offline delivery directory.
+  replace:
+    path: '/etc/default/dnsmasq'
+    regexp: 'CONFIG_DIR=/etc/dnsmasq.d'
+    replace: 'CONFIG_DIR={{ offline_delivery_dir }}/dnsmasq/dnsmasq.d'
+  become: yes
+
+- name: make DNSMASQ use upstreams from configuration only.
+  replace:
+    path: '/etc/default/dnsmasq'
+    regexp: '.*DNSMASQ_OPTS=.*'
+    replace: 'DNSMASQ_OPTS="--no-resolv"'
+  become: yes
+
+- name: 'add DNS entry for {{ fake_domain }}'
+  command: bash -c 'echo "address=/{{ fake_domain }}/{{ assethost_ip }}" > {{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ fake_domain }}'
+  creates: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ fake_domain }}'
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes

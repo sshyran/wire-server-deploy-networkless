@@ -1,0 +1,66 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Include Prompts
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: prompt for what infrastructure we're using
+      import_tasks: prompts/vpc-or-kvm.yml
+      when: wdt_infra == 'prompt'
+    - name: prompt for what region we're deploying to
+      import_tasks: prompts/region.yml
+      when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
+    - name: prompt for what environment we're deploying to
+      import_tasks: prompts/environment.yml
+      when: wdt_env == 'prompt'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/vpc_bastion.yml
+      vars:
+        agent: true
+      when: wdt_infra == 'vpc'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/kvm_bastion.yml
+      vars:
+        agent: true
+      when: bastion_eip is not defined and wdt_infra == 'kvm'
+    - name: prompt for the target IP.
+      import_tasks: prompts/first_target.yml
+      vars:
+        label: the target host
+    - name: prompt for the asset host IP.
+      import_tasks: prompts/second_target.yml
+      vars:
+        label: the asset host
+    - name: prompt for the fake domain name
+      import_tasks: prompts/fake_domain.yml
+      when: fake_domain is not defined
+
+- name: Ensure offline content directory exists
+  hosts: first_target_host
+  gather_facts: no
+  become: no
+  tasks:
+    - name: create directory for containing the CA certificate of our assethost
+      raw: 'sudo mkdir -p /usr/local/share/ca-certificates/{{ fake_domain }}/'
+    - name: copy certificate from asset host
+      raw: 'sudo curl http://{{ second_target_ip }}/{{ fake_domain }}.crt -o /usr/local/share/ca-certificates/{{ fake_domain }}/{{ fake_domain }}.crt'
+    - name: update certificate trust store
+      raw: 'sudo update-ca-certificates'
+    - name: disable cloud-init networking
+      raw: sudo bash -c 'echo "network{{ ":" }} {config{{ ":" }} disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg'
+    - name: steal and modify cloud-init network config
+      raw: sudo bash -c 'cat /etc/netplan/50-cloud-init.yaml | sed  "s/\(.*\)\(dhcp4{{ ":" }} true\)/\1\2\n\1nameservers{{ ":" }}\n\1  addresses{{ ":" }} [{{ second_target_ip }}]\n\1dhcp4-overrides{{ ":" }}\n\1  use-dns{{ ":" }} no/" >> /etc/netplan/offline.yaml'
+    - name: use new networking config
+      raw: sudo netplan apply
+      
