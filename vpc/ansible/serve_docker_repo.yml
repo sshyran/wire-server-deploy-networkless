@@ -49,6 +49,7 @@
       when: uninstall is not defined
       vars:
         fake_domain: '{{ dns_domain }}'
+        assethost_ip: '{{ first_target_ip }}'
 
 - name: Stop serving docker content
   hosts: first_target_host
