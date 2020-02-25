@@ -1,22 +1,28 @@
 ---
+- name: ensure label is set
+  set_fact: label='the second target host'
+  when: label is undefined
+
 - name: Select target
   pause:
-    prompt: "what is the IP of the second target host?"
+    prompt: "what is the IP of {{ label }}?"
   register: second_target
+  when: second_target_ip is not defined
 
 - name: set fact from prompt
   set_fact:
     second_target_ip: '{{ second_target.user_input }}'
+  when: second_target_ip is not defined
 
 - name: add second target behind bastion host
   add_host:
-    name: '{{ second_target_eip }}'
+    name: '{{ second_target_ip }}'
     groups: second_target_host
-    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ubuntu@{{ bastion_eip }}" -o StrictHostKeyChecking=no'
-  when: bastion_eip != ""
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ubuntu@{{ bastion_eip }}" -o StrictHostKeyChecking=no -l ubuntu'
+  when: bastion_eip is defined
 
 - name: add second_target
   add_host:
-    name: '{{ second_target_eip }}'
+    name: '{{ second_target_ip }}'
     groups: second_target_host
-  when: bastion_eip == ""
+  when: bastion_eip is not defined
