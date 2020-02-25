@@ -27,6 +27,7 @@ e kubernetes hosts.
 * add these IPs to your shell environment, so the below commands work. for instance:
   * export bastion=3.126.15.79 # the bastion host's EXTERNAL IP.
   * export assethost=172.17.0.223 # the assethost's internal IP.
+  * export adminhost=172.17.3.11 # the adminhost's internal IP.
 
 From wire-server-deploy-networkless's /vpc/ansible/
 * run golden_image.yml on the bastion host.
@@ -42,8 +43,16 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook deploy_offline_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run golden_image-assethost.yml to golden image the assethost using the local repository.
   * ansible-playbook golden_image-assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$assethost
-* run serve_debian_repo.yml to set up apache, and serve the debian mirror via a fake apt.wire.com.
+* run serve_https.yml to set up apache, and serve up the CA certificate for a fake apt.wire.com.
+  * ansible-playbook serve_https.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_dns.yml to configure DNS on the assethost.
+  * ansible-playbook serve_dns.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_debian_repo.yml to serve the debian mirror via a fake apt.wire.com.
   * ansible-playbook serve_debian_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_docker_repo.yml to set up docker, and serve docker content through apache.
   * ansible-playbook serve_docker_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
-		
+* run trust_assethost.yml to load our fake CA's certificate into a target machine, and to use the assethost for DNS resolution.
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$adminhost -e second_target_ip=$assethost
+* run golden_image-from_assethost.yml to golden image the adminhost using the repository on the assethost.
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$adminhost
+			
