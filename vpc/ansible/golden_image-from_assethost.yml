@@ -1,0 +1,63 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Include Prompts
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: prompt for what infrastructure we're using
+      import_tasks: prompts/vpc-or-kvm.yml
+      when: wdt_infra == 'prompt'
+    - name: prompt for what region we're deploying to
+      import_tasks: prompts/region.yml
+      when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
+    - name: prompt for what environment we're deploying to
+      import_tasks: prompts/environment.yml
+      when: wdt_env == 'prompt'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/vpc_bastion.yml
+      when: wdt_infra == 'vpc'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/kvm_bastion.yml
+      when: bastion_eip is not defined and wdt_infra == 'kvm'
+    - name: prompt for the target IP
+      import_tasks: prompts/first_target.yml
+      vars:
+        label: the target host
+    - name: prompt for the fake domain name
+      import_tasks: prompts/fake_domain.yml
+      when: fake_domain is not defined
+
+
+- name: Use assethost debian repo
+  hosts: first_target_host
+  gather_facts: no
+  become: no
+  remote_user: ubuntu
+  tasks:
+    - name: move sources.list aside
+      raw: '[ ! -f /etc/apt/sources.list ] || sudo mv /etc/apt/sources.list /etc/apt/sources.list.orig'
+    - name: add assethost mirror entry
+      raw: sudo bash -c 'echo "deb [trusted=yes] https://apt.{{ fake_domain }}/apt/ bionic stable" > /etc/apt/sources.list.d/local.sources.list'
+    - name: inform apt about the new repository
+      raw: sudo apt update
+
+- name: Golden image
+  hosts: first_target_host
+  gather_facts: no
+  remote_user: ubuntu
+  become: yes
+  tasks:
+    - name: Golden image remote target
+      import_tasks: golden_image-tasks.yml
+      when: wdt_type != "khan"
