@@ -70,9 +70,6 @@
     path: '{{ offline_content_dir }}/docker_repository'
     state: directory
 
-- name: dump our groups, debugging code
-  command: groups
-
 - name: download docker registry image into local docker
   command: docker pull --platform=amd64 registry:2
 
