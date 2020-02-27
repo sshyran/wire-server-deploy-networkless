@@ -35,18 +35,21 @@
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
 
 - name: 'create certificate for {{ item }} (2 of 3)'
   command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN={{ item }}"'
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
 
 - name: 'create certificate for {{ item }} (3 of 3)'
   command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem -days 500 -sha256'
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
 
 - name: create apache configuration
   copy:
@@ -56,6 +59,7 @@
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
 
 - name: modify apache configuration to refer to proper ssl certs (1 of 2)
   replace:
@@ -65,6 +69,7 @@
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
 
 - name: modify apache configuration to refer to proper ssl certs (2 of 2)
   replace:
@@ -74,16 +79,20 @@
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
 
 - name: modify apache configuration to serve the poetry repository (1 of 2)
   blockinfile:
-    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
     block: |
-      ServerName {{ domain }}
+      ServerName {{ item }}
       HostnameLookups Off
     insertbefore: </VirtualHost>
   vars:
-    domain: 'github.com'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
 
 - name: get a list of subdirectories of github to serve.
   find:
@@ -107,6 +116,50 @@
     domain: 'github.com'
   with_items: '{{ github_targets.files }}'
 
+- name: get a list of subdirectories of raw.githubusercontent.com to serve.
+  find:
+    paths: '{{ offline_content_dir }}/static/raw.githubusercontent.com/'
+    file_type: directory
+    patterns: "*"
+  register: githubusercontent_targets
+
+- name: modify apache configuration to serve the poetry repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'raw.githubusercontent.com'
+  with_items: '{{ githubusercontent_targets.files }}'
+
+- name: get a list of subdirectories of pypi.org to serve
+  find:
+    paths: '{{ offline_content_dir }}/static/pypi.org/'
+    file_type: directory
+    patterns: "*"
+  register: pypi_targets
+
+- name: modify apache configuration to serve the pypi repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'pypi.org'
+  with_items: '{{ pypi_targets.files }}'
+
 - name: 'enable apache configuration for {{ item }}'
   file:
     src: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
@@ -115,6 +168,7 @@
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
+    - 'pypi.org'
   become: yes
 
 - name: restart apache
@@ -131,7 +185,7 @@
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
-  become: yes
+    - 'pypi.org'
 
 - name: restart DNSMASQ
   systemd:
