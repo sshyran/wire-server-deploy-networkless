@@ -81,8 +81,9 @@
   become: yes
 
 - name: 'add DNS entry for apt.{{ fake_domain }}'
-  command: bash -c 'echo "address=/apt.{{ fake_domain }}/{{ assethost_ip }}" > {{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/apt.{{ fake_domain }}'
-  creates: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/apt.{{ fake_domain }}'
+  copy:
+    content: 'address=/apt.{{ fake_domain }}/{{ assethost_ip }}'
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/apt.{{ fake_domain }}'
 
 - name: restart DNSMASQ
   systemd:
