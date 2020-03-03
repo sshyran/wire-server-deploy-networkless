@@ -258,7 +258,6 @@
     - 'gcr.io'
     - 'quay.io'
     - 'registry-1.docker.io'
-  become: yes
 
 - name: restart DNSMASQ
   systemd:
