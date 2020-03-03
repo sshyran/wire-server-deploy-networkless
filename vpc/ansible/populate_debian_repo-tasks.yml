@@ -28,17 +28,17 @@
 
 - name: install fai-server
   apt:
-   name: fai-server
+    name: fai-server
   become: yes
 
 - name: install reprepro
   apt:
-   name: reprepro
+    name: reprepro
   become: yes
 
 - name: install aptitude
   apt:
-   name: aptitude
+    name: aptitude
   become: yes
 
 - name: create offline content directory for debian packages
