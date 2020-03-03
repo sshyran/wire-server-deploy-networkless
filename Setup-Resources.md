@@ -37,6 +37,9 @@ Follow the instructions in 'Raw Content/HTTPS' to serve our git-poetry.py script
  * point the '/sdispater' directory of raw.githubusercontent.com to $CONTENTHOME/sdispater .
  * populate the content by using curl to download https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py, placing it at $CONTENTHOME/sdispater/poetry/master/get-poetry.py .
 
+#### Poetry Repository
+
+Follow the directions in 'Repositories/Poetry Repository' 
 
 ### Ansible
 
