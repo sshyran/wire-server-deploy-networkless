@@ -977,7 +977,7 @@ The galaxy rest API stores a definition of it's server version, and protocol ver
 ```
 export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
 export REPOPATH=$CONTENTHOME/galaxy_repository/api/
-echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $repopath/index.html
+echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $REPOPATH/index.html
 ```
 
 The next endpoint we have to serve is /api/v1/roles. you can query for a specific role by name:
