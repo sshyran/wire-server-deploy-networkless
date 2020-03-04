@@ -1,0 +1,51 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: create offline content directory for static web content
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+
+- name: create offline content directory for github.com
+  file:
+    path: '{{ offline_content_dir }}/static/github.com'
+    state: directory
+
+- name: create directories for all of our organizations
+  file:
+    path: '{{ offline_content_dir }}/static/github.com/{{ item }}'
+    state: directory
+  loop:
+   - 'wireapp'
+   - 'elastic'
+   - 'ANXS'
+   - 'geerlingguy'
+   - 'githubixx'
+   - 'andrewrothstein'
+   - 'cchurch'
+   - 'kubernetes-sigs'
+
+- name: download all of our github repos.
+  command: bash -e -c 'git clone --bare https://github.com/{{ item }} {{ offline_content_dir }}/static/github.com/{{ item }}; mv {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update.sample {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; chmod a+x {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; cd {{ offline_content_dir }}/static/github.com/{{ item }}/ && git update-server-info'
+  loop:
+   - 'wireapp/wire-server-deploy'
+   - 'wireapp/wire-server-deploy-networkless'
+   - 'wireapp/ansible-cassandra.git'
+   - 'wireapp/ansible-minio.git'
+   - 'wireapp/ansible-restund.git'
+   - 'wireapp/ansible-tinc.git'
+   - 'elastic/ansible-elasticsearch.git'
+   - 'ANXS/hostname.git'
+   - 'ANXS/apt.git'
+   - 'geerlingguy/ansible-role-java.git'
+   - 'geerlingguy/ansible-role-ntp.git'
+   - 'githubixx/ansible-role-kubectl.git'
+   - 'andrewrothstein/ansible-kubernetes-helm.git'
+   - 'cchurch/ansible-role-admin-users.git'
+   - 'kubernetes-sigs/kubespray.git'
