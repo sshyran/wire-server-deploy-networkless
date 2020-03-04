@@ -693,12 +693,6 @@ Since the last step set up our fake github.com, we are only going to need to add
 
 #### Populating the repository
 
-* Make a directory for holding our git repo. for this example, we're going to be mirroring wire-server-deploy.
-```
-export ORG=wireapp
-mkdir -p /home/wire/docker-squid4/docker-squid/$ORG
-```
-
 * populate the repo:
 ```
 export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
