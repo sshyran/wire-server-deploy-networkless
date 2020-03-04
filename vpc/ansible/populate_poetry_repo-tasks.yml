@@ -118,7 +118,7 @@
   file:
     path: '{{ offline_content_dir }}/poetry-repo/simple/{{ item }}'
     state: directory
-  loop: '{{ package_targets.stdout_lines }}'
+  loop: '{{ package_safe_targets.stdout_lines }}'
 
 - name: get the upstream contents for each package.
   get_url:
@@ -142,13 +142,13 @@
 
 - name: create initial html snippets
   command: bash -c "echo $'<html>\n    <head>' > {{ offline_content_dir }}/poetry-repo/simple/{{ item }}/index.html"
-  loop: '{{ package_targets.stdout_lines }}'
+  loop: '{{ package_safe_targets.stdout_lines }}'
 
 - name: generate URLs for all files
-  command: bash -e -c 'for each in $(echo "{{ item.stdout }}" | sed -n "s/  - //p"); do { for href in $(grep $each {{ offline_config_dir }}/poetry-repo/$(echo "{{ item.stdout }}" | sed -n "s/://p")/index.orig | sed "s/.*href=.//" | sed "s/\".*//") ; do { echo "    <a href=\"https://pypi.org/repo/"$(echo $href | sed "s=.*/==")"\">"$(echo $href | sed "s=.*/==" | sed "s=.sha.*==")"<\a>" >> {{ offline_content_dir }}/poetry-repo/simple/$(echo "{{ item.stdout }}" | sed -n "s/://p")/index.html; } ; done ; } done;'
+  command: bash -e -c 'for each in $(echo "{{ item.stdout }}" | sed -n "s/  - //p"); do { for href in $(grep $each {{ offline_config_dir }}/poetry-repo/$(echo "{{ item.stdout }}" | sed -n "s/://p")/index.orig | sed "s/.*href=.//" | sed "s/\".*//") ; do { echo "    <a href=\"https://pypi.org/repo/"$(echo $href | sed "s=.*/==")"\">"$(echo $href | sed "s=.*/==" | sed "s=.sha.*==")"<\a>" >> {{ offline_content_dir }}/poetry-repo/simple/$(echo "{{ item.stdout }}" | sed -n "s/://p" | tr "." "-" )/index.html; } ; done ; } done;'
   loop: '{{ packages_with_sha256s.results }}'
 
 - name: add finishing html snippets
   command: bash -c "echo $'    <\head>\n<\html>' >> {{ offline_content_dir }}/poetry-repo/simple/{{ item }}/index.html"
-  loop: '{{ package_targets.stdout_lines }}'
+  loop: '{{ package_safe_targets.stdout_lines }}'
 
