@@ -1,0 +1,18 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: create offline content directory for kubernetes-charts.storage.googleapis.com
+  file:
+    path: '{{ offline_content_dir }}/static/kubernetes-charts.storage.googleapis.com'
+    state: directory
+
+- name: download the helm index
+  get_url:
+    url: 'https://kubernetes-charts.storage.googleapis.com/index.yaml'
+    dest: '{{ offline_content_dir }}/static/kubernetes-charts.storage.googleapis.com/index.yaml'
