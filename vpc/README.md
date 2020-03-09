@@ -18,8 +18,7 @@ If this VPC has not been deployed via terraform before:
   * run terraform in spray/one-time-setup/setup-terraform-state to create the locks.
     * NOTE: terraform says it is creating all of the things in this file, because there is no root state file for these. don't worry when it fails to create the stuff that already exists!
 
-Use the bootstrap terraform definition in wire-server-deploy-networkless's /vpc/terraform/ to deploy the offline VPC. This should result in a bastion host, an admin host, an assethost host, a VPN host, FIXME: three ansible hosts, and thre\
-e kubernetes hosts.
+Use the bootstrap terraform definition in wire-server-deploy-networkless's /vpc/terraform/ to deploy the offline VPC. This should result in a bastion host, an admin host, an assethost host, a VPN host, FIXME: three ansible hosts, and three kubernetes hosts.
   * terraform apply
 
 * log into AWS and look up the IPs for your bastion host, and your assethost.
@@ -36,8 +35,16 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook populate_debian_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * run populate_docker_repo.yml on the bastion host to download our docker images.
   * ansible-playbook populate_docker_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
-* run populate_helm_repo.yml on the bastion host to download our helm charts.
+* run populate_poetry_repo.yml on the bastion host to download our poetry repository.
+  * ansible-playbook populate_poetry_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
+* run populate_helm_repo.yml on the bastion host to download our helm 3 charts and helm3 binary.
   * ansible-playbook populate_helm_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
+* run populate_helm2_repo.yml on the bastion host to download our helm2 binary and index.
+  * ansible-playbook populate_helm2_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
+* run populate_github_repos.yml on the bastion host to download all of the git repos we need.
+  * ansible-playbook populate_github_repos.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
+* run populate_ansible_galaxy_repo.yml on the bastion host to download the one package from ansible galaxy that we need.
+  * ansible-playbook populate_ansible_galaxy_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * set up your ssh agent in the terminal you're using, and import the key you are using into the agent.
 * run deploy_offline_content.yml to copy the debian repo and the docker repo to the assethost. yes, this step uses ssh proxying stuff a bit extra manually, so ensure your ssh agent is working.
   * ansible-playbook deploy_offline_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$assethost
@@ -55,4 +62,14 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$adminhost -e second_target_ip=$assethost
 * run golden_image-from_assethost.yml to golden image the adminhost using the repository on the assethost.
   * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$adminhost
-			
+* run serve_poetry_repo.yml to serve the poetry repository.
+  * ansible-playbook serve_poetry_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_kubernetes_static_content.yml to serve binaries to kubernetes.
+  * ansible-playbook serve_kubernetes_static_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_helm2_repo.yml to serve the helm2 binary and index.
+  * ansible-playbook serve_helm2_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_ansible_galaxy_repo.yml to serve the ansible galaxy repository.
+  * ansible-playbook serve_ansible_galaxy_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_helm3_repo.yml to serve the helm3 binary.
+  * ansible-playbook serve_helm3_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+					  
