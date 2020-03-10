@@ -7,28 +7,32 @@
   set_fact: offline_config_dir='/home/ubuntu/offline_config/'
   when: offline_config_dir is undefined
 
+- name: ensure helm3_version is set
+  set_fact: helm3_version='v3.1.0'
+  when: helm3_version is undefined
+
 - name: determine what architecture the target server is running on in helm style.
   command: bash -c 'uname -m | sed -e "s/i[3-6]86/i386/" -e "s/x86_/amd/" -e "s/aarch/arm/"'
   register: helm_architecture
 
 - name: download helm checksum
   get_url:
-    url: 'https://get.helm.sh/helm-v3.1.0-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum'
-    dest: '/tmp/helm-v3.1.0-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum'
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum'
+    dest: '/tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum'
 
 - name: read helm checksum
-  command: bash -c 'cat /tmp/helm-v3.1.0-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum | sed "s/ .*//"'
+  command: bash -c 'cat /tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum | sed "s/ .*//"'
   register: helm_checksum
 
 - name: download helm binary
   get_url:
-    url: 'https://get.helm.sh/helm-v3.1.0-linux-{{ helm_architecture.stdout }}.tar.gz'
-    dest: '/tmp/helm-v3.1.0-linux-{{ helm_architecture.stdout }}.tar.gz'
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz'
+    dest: '/tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz'
     checksum: 'sha256:{{ helm_checksum.stdout }}'
 
 - name: extract helm binary
   unarchive:
-    src: '/tmp/helm-v3.1.0-linux-{{ helm_architecture.stdout }}.tar.gz'
+    src: '/tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz'
     dest: /usr/local/bin
     extra_opts:
     - --strip=1
@@ -37,6 +41,32 @@
     remote_src: True
     creates: /usr/local/bin/helm
   become: yes
+
+- name: create offline content directory for static content
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+
+- name: create offline content directory for helm binaries
+  file:
+    path: '{{ offline_content_dir }}/static/get.helm.sh/'
+    state: directory
+
+- name: download helm checksum
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz.sha256sum'
+    dest: '{{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz.sha256sum'
+
+- name: read helm checksum
+  command: bash -c 'cat {{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz.sha256sum | sed "s/ .*//"'
+  register: helm_checksum
+
+- name: download helm binary
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz'
+    dest: '/{{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz'
+    checksum: 'sha256:{{ helm_checksum.stdout }}'
+
 
 - name: create offline content directory for helm charts
   file:
