@@ -34,7 +34,7 @@
 - name: download all of our github repos.
   command: bash -e -c 'git clone --bare https://github.com/{{ item }} {{ offline_content_dir }}/static/github.com/{{ item }}; mv {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update.sample {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; chmod a+x {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; cd {{ offline_content_dir }}/static/github.com/{{ item }}/ && git update-server-info'
   loop:
-   - 'wireapp/wire-server-deploy'
+   - 'wireapp/wire-server-deploy.git'
    - 'wireapp/wire-server-deploy-networkless'
    - 'wireapp/ansible-cassandra.git'
    - 'wireapp/ansible-minio.git'
