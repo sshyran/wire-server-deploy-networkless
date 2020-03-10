@@ -299,13 +299,13 @@ resource "aws_security_group" "has_https" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.vpc_ssh_from.id}"]
+    security_groups = ["${aws_security_group.vpc_https_from.id}"]
     }
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.vpc_ssh_from.id}"]
+    security_groups = ["${aws_security_group.vpc_https_from.id}"]
     }
 
   tags = {
