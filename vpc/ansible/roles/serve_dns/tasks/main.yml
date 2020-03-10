@@ -48,7 +48,6 @@
 
 - name: 'add DNS entry for {{ fake_domain }}'
   command: bash -c 'echo "address=/{{ fake_domain }}/{{ assethost_ip }}" > {{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ fake_domain }}'
-  creates: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ fake_domain }}'
 
 - name: restart DNSMASQ
   systemd:
