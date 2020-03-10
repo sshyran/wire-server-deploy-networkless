@@ -389,3 +389,108 @@ resource "aws_instance" "assethost-offline" {
     ]
 }
 
+# our kubernetes endpoints
+resource "aws_instance" "kubepod1-offline" {
+  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+  instance_type = "m3.medium"
+  subnet_id     = "${module.vpc.private_subnets[0]}"
+  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+  tags = {
+      Name = "kubepod1-offline",
+      Environment = "offline",
+      Role = "kubepod"
+  }
+  vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
+    "${aws_security_group.has_ssh.id}"
+    ]
+}
+
+resource "aws_instance" "kubepod2-offline" {
+  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+  instance_type = "m3.medium"
+  subnet_id     = "${module.vpc.private_subnets[0]}"
+  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+  tags = {
+      Name = "kubepod2-offline",
+      Environment = "offline",
+      Role = "kubepod"
+  }
+  vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
+    "${aws_security_group.has_ssh.id}"
+    ]
+}
+
+# our kubernetes endpoints
+resource "aws_instance" "kubepod3-offline" {
+  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+  instance_type = "m3.medium"
+  subnet_id     = "${module.vpc.private_subnets[0]}"
+  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+  tags = {
+      Name = "kubepod3-offline",
+      Environment = "offline",
+      Role = "kubepod"
+  }
+  vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
+    "${aws_security_group.has_ssh.id}"
+    ]
+}
+
+# our ephemeral service endpoints
+resource "aws_instance" "ansnode1-offline" {
+  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+  instance_type = "m3.medium"
+  subnet_id     = "${module.vpc.private_subnets[0]}"
+  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+  tags = {
+      Name = "ansnode1-offline",
+      Environment = "offline",
+      Role = "ansnode"
+  }
+  vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
+    "${aws_security_group.has_ssh.id}"
+    ]
+}
+
+resource "aws_instance" "ansnode2-offline" {
+  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+  instance_type = "m3.medium"
+  subnet_id     = "${module.vpc.private_subnets[0]}"
+  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+  tags = {
+      Name = "ansnode2-offline",
+      Environment = "offline",
+      Role = "ansnode"
+  }
+  vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
+    "${aws_security_group.has_ssh.id}"
+    ]
+}
+
+resource "aws_instance" "ansnode3-offline" {
+  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+  instance_type = "m3.medium"
+  subnet_id     = "${module.vpc.private_subnets[0]}"
+  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+  tags = {
+      Name = "ansnode3-offline",
+      Environment = "offline",
+      Role = "ansnode"
+  }
+  vpc_security_group_ids = [
+    "${aws_security_group.vpc_dns_from.id}",
+    "${aws_security_group.vpc_https_from.id}",
+    "${aws_security_group.has_ssh.id}"
+    ]
+}
+
