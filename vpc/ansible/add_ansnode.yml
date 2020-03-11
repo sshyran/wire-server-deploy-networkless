@@ -45,26 +45,26 @@
     - name: prompt for the fake domain name
       import_tasks: prompts/fake_domain.yml
       when: fake_domain is not defined
-    - name: prompt for the kubernetes node number
+    - name: prompt for the ansible node number
       import_tasks: prompts/node_number.yml
       when: node_number is not defined
       vars:
-        label: kubernetes node
+        label: ansible node
 
-- name: add DNSMASQ entry for kubenode
+- name: add DNSMASQ entry for ansnode
   hosts: second_target_host
   gather_facts: no
   tasks:
   remote_user: ubuntu
   tasks:
     - name: create DNSMASQ entry on asset host
-      include_tasks: add_kubenode-tasks.yml
+      include_tasks: add_ansnode-tasks.yml
       when: uninstall is not defined
       vars:
         fake_domain: '{{ dns_domain }}'
-        kubenode_ip: '{{ first_target_ip }}'
+        ansnode_ip: '{{ first_target_ip }}'
 
-- name: Destroy kubenode DNSMASQ entry
+- name: Destroy ansnode DNSMASQ entry
   hosts: second_target_host
   gather_facts: no
   remote_user: ubuntu
