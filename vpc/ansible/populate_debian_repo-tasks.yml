@@ -204,3 +204,13 @@
 
 - name: populate the apt repository
   command: 'fai-mirror -v -b -a amd64 -C {{ offline_config_dir }}/fai_etc {{ offline_content_dir }}/apt_repository'
+
+- name: create offline content directory for docker gpg key
+  file:
+    path: '{{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/'
+    state: directory
+
+- name: grab a copy of the docker gpg key
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: '{{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/gpg'
