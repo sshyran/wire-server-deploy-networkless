@@ -88,7 +88,6 @@
       ServerName {{ item }}
       HostnameLookups Off
     insertbefore: </VirtualHost>
-  vars:
   with_items:
     - 'raw.githubusercontent.com'
     - 'github.com'
