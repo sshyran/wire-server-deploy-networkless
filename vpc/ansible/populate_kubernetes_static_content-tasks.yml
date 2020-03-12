@@ -1,0 +1,94 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure a kubernetes version is set
+  set_fact: kubernetes_version='v1.14.2'
+  when: kubernetes_version is undefined
+
+- name: ensure a helm version is set
+  set_fact: helm_version='v2.13.1'
+  when: helm_version is undefined
+
+- name: create offline content directory for static web content
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+
+- name: create offline content directory for dl.k8s.io
+  file:
+    path: '{{ offline_content_dir }}/static/dl.k8s.io'
+    state: directory
+
+- name: create offline content directory for the kubernetes client
+  file:
+    path: '{{ offline_content_dir }}/static/dl.k8s.io/{{ kubernetes_version }}/'
+    state: directory
+
+- name: create offline content directory for the kubernetes release files
+  file:
+    path: '{{ offline_content_dir }}/static/dl.k8s.io/release/'
+    state: directory
+
+- name: create offline content directory for storage.googleapis.com
+  file:
+    path: '{{ offline_content_dir }}/static/storage.googleapis.com'
+    state: directory
+
+- name: create offline content directory for kubernetes administrative tools
+  file:
+    path: '{{ offline_content_dir }}/static/storage.googleapis.com/kubernetes-release/release/{{ kubernetes_version }}/bin/linux/amd64'
+    state: directory
+
+- name: create offline content directory for helm
+  file:
+    path: '{{ offline_content_dir }}/static/storage.googleapis.com/kubernetes-helm/'
+    state: directory
+
+- name: download the kubernetes client
+  get_url:
+    url: 'https://dl.k8s.io/{{ kubernetes_version }}/kubernetes-client-linux-amd64.tar.gz'
+    dest: '{{ offline_content_dir }}/static/dl.k8s.io/{{ kubernetes_version }}/kubernetes-client-linux-amd64.tar.gz'
+
+- name: download helm
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-helm/helm-{{ helm_version }}-linux-amd64.tar.gz'
+    dest: '{{ offline_content_dir }}/static/storage.googleapis.com/kubernetes-helm/helm-{{ helm_version }}-linux-amd64.tar.gz'
+
+- name: download the kubernetes release files
+  get_url:
+    url: 'https://dl.k8s.io/release/{{ item }}'
+    dest: '{{ offline_content_dir }}/static/dl.k8s.io/release/{{ item }}'
+  loop:
+    - 'stable-1.txt'
+    - 'stable-1.14.txt'
+
+- name: download more kubernetes administrative tools
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-release/release/{{ kubernetes_version }}/bin/linux/amd64/{{ item }}'
+    dest: '{{ offline_content_dir }}/static/storage.googleapis.com/kubernetes-release/release/{{ kubernetes_version }}/bin/linux/amd64/{{ item }}'
+  loop:
+    - 'kubeadm'
+    - 'hyperkube'
+
+- name: create offline content directory for github.com
+  file:
+    path: '{{ offline_content_dir }}/static/github.com'
+    state: directory
+
+- name: creating static offline content directory for containernetworking releases
+  file:
+    path: '{{ offline_content_dir }}/static/github.com/containernetworking/plugins/releases/download/v0.6.0/'
+    state: directory
+
+- name: download containernetworking plugins
+  get_url:
+    url: 'https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz'
+    dest: '{{ offline_content_dir }}/static/github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz'
+
+
