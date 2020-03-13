@@ -156,7 +156,11 @@
     content: |
       PACKAGES aptitude-r
       aufs-tools python-httplib2 socat unzip ipvsadm pigz cgroupfs-mount
-      libltdl7 containerd.io docker-ce-cli docker-ce
+      libltdl7 containerd.io
+      PACKAGES aptitude
+      docker-ce-cli=5:18.09.5~3-0~ubuntu-bionic
+      PACKAGES aptitude-r
+      docker-ce=5:18.09.5~3-0~ubuntu-bionic
 
 - name: modify fai-mirror (Codename)
   replace:
