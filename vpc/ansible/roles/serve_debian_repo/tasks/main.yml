@@ -93,30 +93,26 @@
     patterns: "*"
   register: download_docker_targets
 
-- name: modify apache configuration to serve download.docker.com (1 of 2)
-  blockinfile:
-    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
-    block: |
-      ServerName {{ item }}
-      HostnameLookups Off
-    insertbefore: </VirtualHost>
-  with_items:
-    - 'download.docker.com'
-
 - name: modify apache configuration to serve download.docker.com (2 of 2)
   blockinfile:
     path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
     block: |
-      alias /{{ item.path | basename }} {{ item.path }}
-      <Directory {{ item.path }}>
+      ServerName {{ domain }}
+      HostnameLookups Off
+      alias /linux/ubuntu/gpg {{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/gpg
+      <Directory {{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/gpg>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+      alias /linux/ubuntu {{ offline_content_dir }}/apt_repository
+      <Directory {{ offline_content_dir }}/apt_repository>
       Options Indexes FollowSymLinks MultiViews
       Require all granted
       </Directory>
     insertbefore: </VirtualHost>
-    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ domain }}"
   vars:
     domain: 'download.docker.com'
-  with_items: '{{ download_docker_targets.files }}'
 
 - name: 'enable apache configuration for {{ item }}'
   file:
