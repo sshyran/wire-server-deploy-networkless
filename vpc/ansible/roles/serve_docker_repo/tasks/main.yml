@@ -136,11 +136,11 @@
   register: docker_images
 
 - name: load docker images into docker
-  command: bash -c "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | sed 'sq=q/q' )"
+  command: bash -c "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | sed 'sq=q/qg' )"
   with_items: '{{ docker_images.files }}'
 
 - name: load docker images from docker into docker registry
-  command: bash -c "{{ offline_delivery_dir }}/docker-registry/upload_image.sh $(echo {{ item.path }} | sed '/.*\/[a-z0-9/.]*=.*_.*-amd64.tar.bz2/{sq.*/\(\([a-z0-9/.-]*\)=\(.*\)\|\(.*\)\)_\(.*\)-amd64.tar.bz2q\1:\5q;s/=/ /;sq=q/qg}' | sed 'sq.*/\(.*\)_\(.*\)-amd64.tar.bz2qdocker.io \1:\2q') || true"
+  command: bash -c "{{ offline_delivery_dir }}/docker-registry/upload_image.sh $(echo {{ item.path }} | sed '/.*\/[a-z0-9/.]*=.*_.*-amd64.tar.bz2/{sq.*/\(\([a-z0-9/.-]*\)=\(.*\)\|\(.*\)\)_\(.*\)-amd64.tar.bz2q\1:\5q;s/=/ /;sq=q/qg}' | sed 'sq.*/\(.*\)_\(.*\)-amd64.tar.bz2qdocker.io \1:\2q')"
   with_items: '{{ docker_images.files }}'
 
 - name: 'create certificate for {{ item }} (1 of 3)'
