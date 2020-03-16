@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 
-registry_name="localhost:5001"
+# the registry we are loading content into.
+target_registry="localhost:5001"
 
 function mirror() {
     local prefix=${1}${1:+/}  # append '/' if `prefix` is not empty string
-    local image=$2
-    local registry=$3
+    local dest_image=$2
+    # if the image being transfered starts with library/, drop library/ when pulling it.
+    local source_image=$(echo $2 | sed "s=library/==")
+    local source_registry=${3}${3:+/}
     local rmafter=$4
 
-    docker pull $registry/$prefix$image
-    docker tag $registry/$prefix$image $registry_name/$prefix$image
-    docker push $registry_name/$prefix$image
-    [ -n "$rmafter" ] && docker image remove $registry_name/$prefix$image
-    [ -n "$rmafter" ] && docker image remove $registry/$prefix$image
+    docker pull $source_registry$prefix$source_image
+    docker tag $source_registry$prefix$source_image $target_registry/$dest_image
+    docker push $target_registry/$dest_image
+    [ -n "$rmafter" ] && docker image remove $target_registry/$dest_image
+    [ -n "$rmafter" ] && docker image remove $source_registry$prefix$source_image
 }
 
-mirror ${1:-''} $2 ${3:-docker.io} yes
+mirror "$1" "$2" "$3" yes
