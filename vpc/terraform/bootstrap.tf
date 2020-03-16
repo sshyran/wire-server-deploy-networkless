@@ -137,6 +137,8 @@ resource "aws_eip" "bastion-offline" {
   instance = "${aws_instance.bastion-offline.id}"
 }
 
+
+
 # A security group for ssh from the outside world. should only be applied to our bastion hosts.
 resource "aws_security_group" "world_ssh_in" {
   name        = "world_ssh_in"
@@ -215,6 +217,8 @@ resource "aws_security_group" "has_ssh" {
   }
 }
 
+
+
 # A security group for making dns requests inside the VPC. should be added to the admin, ansible, and kubernetes nodes.
 resource "aws_security_group" "vpc_dns_from" {
   name        = "vpc_dns_from"
@@ -265,6 +269,42 @@ resource "aws_security_group" "has_dns" {
   }
 }
 
+# A security group for kubernetes nodes. should be added to them only.
+resource "aws_security_group" "vpc_k8s_from" {
+  name        = "vpc_k8s_from"
+  description = "hosts that are allowed to speak to kubernetes."
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 2379
+    to_port     = 2380
+    protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+  }
+
+  tags = {
+    Name = "vpc_k8s_from"
+  }
+}
+
+# A security group for kubernetes nodes. should be added to them only.
+resource "aws_security_group" "has_k8s" {
+  name        = "has_k8s"
+  description = "hosts that have kubernetes."
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 2379
+    to_port     = 2380
+    protocol    = "tcp"
+    security_groups = ["${aws_security_group.vpc_k8s_from.id}"]
+  }
+
+  tags = {
+    Name = "has_k8s"
+  }
+}
+
 # A security group for making http/https connections inside the VPC. should be added to the admin, ansible, and kubernetes hosts only.
 resource "aws_security_group" "vpc_https_from" {
   name        = "vpc_https_from"
@@ -275,6 +315,12 @@ resource "aws_security_group" "vpc_https_from" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+    }
+  egress {
+    from_port   = 123
+    to_port     = 123
+    protocol    = "udp"
     cidr_blocks = ["172.17.0.0/20"]
     }
   egress {
@@ -299,6 +345,12 @@ resource "aws_security_group" "has_https" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
+    security_groups = ["${aws_security_group.vpc_https_from.id}"]
+    }
+  ingress {
+    from_port   = 123
+    to_port     = 123
+    protocol    = "udp"
     security_groups = ["${aws_security_group.vpc_https_from.id}"]
     }
   ingress {
@@ -403,7 +455,9 @@ resource "aws_instance" "kubepod1-offline" {
   vpc_security_group_ids = [
     "${aws_security_group.vpc_dns_from.id}",
     "${aws_security_group.vpc_https_from.id}",
-    "${aws_security_group.has_ssh.id}"
+    "${aws_security_group.has_ssh.id}",
+    "${aws_security_group.vpc_k8s_from.id}",
+    "${aws_security_group.has_k8s.id}"
     ]
 }
 
@@ -420,7 +474,9 @@ resource "aws_instance" "kubepod2-offline" {
   vpc_security_group_ids = [
     "${aws_security_group.vpc_dns_from.id}",
     "${aws_security_group.vpc_https_from.id}",
-    "${aws_security_group.has_ssh.id}"
+    "${aws_security_group.has_ssh.id}",
+    "${aws_security_group.vpc_k8s_from.id}",
+    "${aws_security_group.has_k8s.id}"
     ]
 }
 
@@ -438,7 +494,9 @@ resource "aws_instance" "kubepod3-offline" {
   vpc_security_group_ids = [
     "${aws_security_group.vpc_dns_from.id}",
     "${aws_security_group.vpc_https_from.id}",
-    "${aws_security_group.has_ssh.id}"
+    "${aws_security_group.has_ssh.id}",
+    "${aws_security_group.vpc_k8s_from.id}",
+    "${aws_security_group.has_k8s.id}"
     ]
 }
 
