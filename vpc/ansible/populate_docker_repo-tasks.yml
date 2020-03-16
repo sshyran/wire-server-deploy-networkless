@@ -84,5 +84,5 @@
   include_vars: 'group_vars/docker_images.yml'
 
 - name: pull down each docker image in our docker image list
-  command: bash -c "docker pull --platform=amd64 {{ item.value.name }}:{{ item.value.tag }} ; docker image save $( docker image ls `echo {{ item.value.name }} | sed 's=^library/=='`:{{ item.value.tag }} | grep `echo {{ item.value.name }} | sed 's=^library/=='` | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | sed 's./.=.g' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image rm {{ item.value.name }}:{{ item.value.tag }}"
+  command: bash -c -x "docker pull --platform=amd64 {{ item.value.name | regex_replace('^docker.io/','') }}:{{ item.value.tag }} ; docker image save $( docker image ls {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }}:{{ item.value.tag }} | grep {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }} | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | tr '/' '=' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image rm {{ item.value.name }}:{{ item.value.tag }}"
   with_dict: '{{ docker_images }}'
