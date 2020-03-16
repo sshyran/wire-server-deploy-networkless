@@ -129,13 +129,6 @@
       PACKAGES aptitude-r
       gdebi-core ngrep ntp plymouth-disabler sysstat tree nload resolvconf
 
-- name: add package config for emacs
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/emacs'
-    content: |
-      PACKAGES aptitude-r
-      emacs25-nox
-
 - name: add package config for ansible
   copy:
     dest: '{{ offline_config_dir }}/fai_config/package_config/ansible'
@@ -161,6 +154,20 @@
       docker-ce-cli=5:18.09.5~3-0~ubuntu-bionic
       PACKAGES aptitude-r
       docker-ce=5:18.09.5~3-0~ubuntu-bionic
+
+- name: add package config for emacs
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/emacs'
+    content: |
+      PACKAGES aptitude-r
+      emacs25-nox
+
+- name: add package config for debugging tools
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/debugging'
+    content: |
+      PACKAGES aptitude-r
+      nmap
 
 - name: modify fai-mirror (Codename)
   replace:
