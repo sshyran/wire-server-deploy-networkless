@@ -64,9 +64,6 @@
 - name: reset SSH connections
   meta: reset_connection
 
-- name: dump groups, debugging
-  command: groups
-
 - name: restore docker registry image from offline content directory
   command: bash -c "cat {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2 | bzip2 -c -d | docker image load"
   register: docker_load_out
@@ -133,14 +130,15 @@
   find:
     paths: '{{ offline_content_dir }}/docker_repository/'
     patterns: "*.bz2"
+    excludes: "*registry_2*"
   register: docker_images
 
 - name: load docker images into docker
-  command: bash -c "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | sed 'sq=q/qg' )"
+  command: bash -c -x "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | tr '=' '/' )"
   with_items: '{{ docker_images.files }}'
 
 - name: load docker images from docker into docker registry
-  command: bash -c "{{ offline_delivery_dir }}/docker-registry/upload_image.sh $(echo {{ item.path }} | sed '/.*\/[a-z0-9/.]*=.*_.*-amd64.tar.bz2/{sq.*/\(\([a-z0-9/.-]*\)=\(.*\)\|\(.*\)\)_\(.*\)-amd64.tar.bz2q\1:\5q;s/=/ /;sq=q/qg}' | sed 'sq.*/\(.*\)_\(.*\)-amd64.tar.bz2qdocker.io \1:\2q')"
+  command: bash -c -x "{{ offline_delivery_dir }}/docker-registry/upload_image.sh \"{{ item.path | basename | regex_replace('=.*','') | regex_replace('docker.io','') }}\" $(echo {{ item.path }} | sed '/.*\/[a-z0-9/.]*=.*_.*-amd64.tar.bz2/{s#.*/\(k8s.gcr.io\|docker.io\|gcr.io\|quay.io\|registry-1.docker.io\)=\(.*\)_\(.*\)-amd64.tar.bz2#\2:\3#}' | tr '=' '/')"
   with_items: '{{ docker_images.files }}'
 
 - name: 'create certificate for {{ item }} (1 of 3)'
