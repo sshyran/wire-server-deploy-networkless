@@ -18,11 +18,12 @@
   add_host:
     name: '{{ first_target_ip }}'
     groups: first_target_host
-    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ubuntu@{{ bastion_eip }}" -o StrictHostKeyChecking=no -l ubuntu'
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q ubuntu@{{ bastion_eip }}" -o StrictHostKeyChecking=no -o serveraliveinterval=60 -l ubuntu'
   when: bastion_eip is defined
 
 - name: add first_target
   add_host:
     name: '{{ first_target_ip }}'
     groups: first_target_host
+    ansible_ssh_common_args: '-o serveraliveinterval=60'
   when: bastion_eip is not defined
