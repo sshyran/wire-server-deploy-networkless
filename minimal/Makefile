@@ -1,22 +1,15 @@
 .DEFAULT_GOAL := default
 SHELL = bash
-
-
-
 MKFILE_DIR = $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
-
-
-HELM_HOME ?= $(MKFILE_DIR)/.helm
-
-
-# NOTE: overriding OS-wide environemnt varibales instead of the `HELM_` prefixed ones. Apparently, they don't properly
-# work yet. Though, right now it also look like that the documented HELM_* vars won't cover every asset (e.g. cached
+# NOTE: overriding OS-wide environment variables instead of the `HELM_` prefixed ones. Apparently, they don't properly
+# work yet. Though, right now it also looks like that the documented HELM_* vars won't cover every asset (e.g. cached
 # plugins, which is still be stored under ${XDG_CACHE_HOME}/helm/plugins and symlinked into ${HELM_PLUGINS}).
 #
 # [1] https://helm.sh/docs/topics/plugins/#environment-variables
 # [2] https://github.com/helm/helm/pull/7166
 #
+HELM_HOME ?= $(MKFILE_DIR)/.helm
 export XDG_CACHE_HOME = $(HELM_HOME)/cache
 export XDG_CONFIG_HOME = $(HELM_HOME)/config
 export XDG_DATA_HOME = $(HELM_HOME)/data
