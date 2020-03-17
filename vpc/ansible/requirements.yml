@@ -1,0 +1,3 @@
+- src: git+https://github.com/wireapp/ansible-minio.git
+  name: ansible-minio
+  version: pull-in-upstream
