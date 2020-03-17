@@ -1,0 +1,63 @@
+---
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: ensure assethost_ip is given.
+  fail:
+    msg: 'assethost_ip must be set'
+  when: assethost_ip is undefined
+
+- name: Install fake ubuntu DNS entries
+  copy:
+    content: |
+      address=/ntp.ubuntu.com/{{ assethost_ip }}
+      address=/0.ubuntu.pool.ntp.org/{{ assethost_ip }}
+      address=/1.ubuntu.pool.ntp.org/{{ assethost_ip }}
+      address=/2.ubuntu.pool.ntp.org/{{ assethost_ip }}
+      address=/3.ubuntu.pool.ntp.org/{{ assethost_ip }}
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/ubuntu_ntp'
+
+- name: copy ntp configuration
+  copy:
+    src: /etc/ntp.conf
+    dest: /etc/ntp.conf.orig
+    remote_src: yes
+  become: yes
+
+- name: disable upstream ntp servers
+  replace:
+    path: '/etc/ntp.conf'
+    regexp: '^pool'
+    replace: '#pool'
+  become: yes
+
+- name: ntp server restrictions
+  replace:
+    path: '/etc/ntp.conf'
+    regexp: '^restrict'
+    replace: '#restrict'
+  become: yes
+
+- name: open up NTP restrictions, and trust the system clock
+  blockinfile:
+    path: '/etc/ntp.conf'
+    block: |
+      restrict default
+      server 127.127.1.1 prefer
+      fudge 127.127.1.1 stratum 5
+  become: yes
+
+- name: restart ntp
+  systemd:
+    name: ntp
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes
