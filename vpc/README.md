@@ -45,6 +45,8 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook populate_github_repos.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * run populate_ansible_galaxy_repo.yml on the bastion host to download the one package from ansible galaxy that we need.
   * ansible-playbook populate_ansible_galaxy_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
+* run populate_kubernetes_static_content.yml on the bastion host to download kubernetes binaries.
+  * ansible-playbook populate_kubernetes_static_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * set up your ssh agent in the terminal you're using, and import the key you are using into the agent.
 * run deploy_offline_content.yml to copy the debian repo and the docker repo to the assethost. yes, this step uses ssh proxying stuff a bit extra manually, so ensure your ssh agent is working.
   * ansible-playbook deploy_offline_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$assethost
@@ -54,14 +56,12 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook serve_https.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_dns.yml to configure DNS on the assethost.
   * ansible-playbook serve_dns.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
+* run serve_ntp.yml to configure NTP on the assethost.
+  * ansible-playbook serve_ntp.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_debian_repo.yml to serve the debian mirror via a fake apt.wire.com.
   * ansible-playbook serve_debian_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_docker_repo.yml to set up docker, and serve docker content through apache.
   * ansible-playbook serve_docker_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
-* run trust_assethost.yml to load our fake CA's certificate into a target machine, and to use the assethost for DNS resolution.
-  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$adminhost -e second_target_ip=$assethost
-* run golden_image-from_assethost.yml to golden image the adminhost using the repository on the assethost.
-  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e bastion_eip=$bastion -e first_target_ip=$adminhost
 * run serve_poetry_repo.yml to serve the poetry repository.
   * ansible-playbook serve_poetry_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_kubernetes_static_content.yml to serve binaries to kubernetes.
@@ -72,4 +72,40 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook serve_ansible_galaxy_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_helm3_repo.yml to serve the helm3 binary.
   * ansible-playbook serve_helm3_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
-					  
+* run trust_assethost.yml to load our fake CA's certificate into a target machine, and to use the assethost for DNS resolution.
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$adminhost
+* run golden_image-from_assethost.yml to golden image the adminhost using the repository on the assethost.
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$adminhost
+
+* Add IPs to your shell environment for the new hosts:
+  * export ansnode1=172.17.0.110
+  * export ansnode2=172.17.2.183
+  * export ansnode3=172.17.0.172
+  * export kubepod1=172.17.3.4
+  * export kubepod2=172.17.0.199
+  * export kubepod3=172.17.2.76
+* add DNS entries for these hosts, so that ansible is reliable, and sudo doesn't time out.
+  * ansible-playbook add_kubenode.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod1 -e node_number=1
+  * ansible-playbook add_kubenode.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod2 -e node_number=2
+  * ansible-playbook add_kubenode.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod3 -e node_number=3
+  * ansible-playbook add_ansnode.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$ansnode1 -e node_number=1
+  * ansible-playbook add_ansnode.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$ansnode2 -e node_number=2
+  * ansible-playbook add_ansnode.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$ansnode3 -e node_number=3
+* run trust_assethost.yml and golden_image-from_assethost.yml to golden image each of these VMs using the repository on the assethost.
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$ansnode1
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$ansnode1
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$ansnode2
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$ansnode2
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$ansnode3
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$ansnode3
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod1
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$kubepod1
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod2
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$kubepod2
+  * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod3
+  * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$kubepod3
+
+Run through README.md from wire-server-deploy until you get to 'Provisioning virtual machines'. Skip provisioning (as terraform does that for us here), and continue with 'Preparing to run ansible'.
+In the 'Authentication' section, perform the steps in 'Configuring SSH keys'.
+
+
