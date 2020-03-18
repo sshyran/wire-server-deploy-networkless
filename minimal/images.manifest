@@ -1,0 +1,75 @@
+# databases-ephemeral
+docker.io/library/cassandra:3.11.3
+docker.io/maorfr/cain:0.6.0
+docker.io/criteord/cassandra_exporter:2.0.2
+docker.io/library/elasticsearch:6.7.1
+docker.io/bitnami/redis:4.0.6-r1
+docker.io/oliver006/redis_exporter:v0.11
+
+# demo-smtp
+docker.io/namshi/smtp:latest
+
+# fake-aws
+docker.io/cnadiminti/dynamodb-local:2018-04-11
+docker.io/mesosphere/aws-cli:1.14.5
+docker.io/minio/minio:RELEASE.2019-08-07T01-59-21Z
+docker.io/minio/mc:RELEASE.2019-08-07T23-14-43Z
+docker.io/localstack/localstack:0.8.7
+docker.io/airdock/fake-sqs:0.3.1
+
+# reaper
+docker.io/roffe/kubectl:v1.13.2
+
+# wire-server
+quay.io/wire/account:2124-2.0.2-df000b-v0.24.26-production
+quay.io/wire/brig:2.76.0
+quay.io/wire/cannon:2.76.0
+docker.io/library/alpine:latest
+quay.io/wire/cargohold:2.76.0
+quay.io/wire/gundeck-schema:2.76.0
+quay.io/wire/brig-schema:2.76.0
+quay.io/wire/galley-schema:2.76.0
+quay.io/wire/spar-schema:2.76.0
+docker.io/library/busybox:latest
+docker.io/appropriate/curl:latest
+quay.io/wire/galley:2.76.0
+quay.io/wire/gundeck:2.76.0
+quay.io/wire/nginz_disco:2.76.0
+quay.io/wire/nginz:2.76.0
+quay.io/wire/proxy:2.76.0
+quay.io/wire/spar:2.76.0
+quay.io/wire/team-settings:13000-2.10.0-3b12f2-v0.24.33-production
+quay.io/wire/webapp:48056-0.1.0-f5e9e8-v0.24.34-production
+
+# nginx-ingress-controller
+quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.30.0
+k8s.gcr.io/defaultbackend-amd64:1.5
+
+# fluent-bit
+docker.io/fluent/fluent-bit:1.2.2
+
+# kibana
+docker.elastic.co/kibana/kibana-oss:6.7.0
+docker.io/dduportal/bats:0.4.0
+# docker.io/library/busybox:latest
+docker.io/dwdraju/alpine-curl-jq:latest
+
+# wire-server-metrics
+docker.io/grafana/grafana:6.2.5
+docker.io/library/busybox:1.30
+docker.io/kiwigrid/k8s-sidecar:0.1.20
+quay.io/coreos/kube-state-metrics:v1.6.0
+quay.io/prometheus/node-exporter:v0.18.0
+k8s.gcr.io/hyperkube:v1.12.1
+quay.io/prometheus/alertmanager:v0.17.0
+docker.io/squareup/ghostunnel:v1.4.1
+docker.io/jettech/kube-webhook-certgen:v1.0.0
+quay.io/coreos/prometheus-operator:v0.31.1
+quay.io/coreos/configmap-reload:v0.0.1
+quay.io/coreos/prometheus-config-reloader:v0.31.1
+quay.io/prometheus/prometheus:v2.10.0
+# docker.io/appropriate/curl:latest
+
+# backoffice
+quay.io/wire/backoffice-frontend:2.76.0
+quay.io/wire/stern:2.76.0
