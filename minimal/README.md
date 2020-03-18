@@ -17,9 +17,7 @@ The package contains ...
 
 * a Kubernetes cluster up and running
 * container image registry accessible from the cluster
-* the registry is configured as
-  [registry-mirror](https://docs.docker.com/registry/recipes/mirror/#configure-the-docker-daemon)
-  for the container engine on all Kubernetes nodes
+* DNS spoofing for all image registries referred to from the Helm charts
 
 In case there is no image registry available, please refer to the description on how to start one,
 provided down below.
@@ -95,12 +93,23 @@ The script, then, basically executes 4 steps on every archived image in `./image
 3. tag the image
 4. push the image to the registry
 
+In order point every pull of an image to that registry that is happening during chart deployment, it is necessary to
+spoof each registry FQDN. For a comprehensive list of FQDNs, please refer to the `image.manifest`. The spoofing could be
+done for instance with [dnsmasq](https://wiki.archlinux.org/index.php/dnsmasq) or by adding entries to `/etc/hosts` on
+every Kubernetes node.
+
++++++++++++++ TODO +++++++++++++
+
+*Alternatively, but not yet implemented:*
+
 When being propagated, all image names are consolidated and *normalized*, in a sense that, even if they originate from
 different registries - not only from the default one `[registry-1.]docker.io]` - their references don't contain the
 registry name anymore. All image reference across the entire set of included helm charts have been adjusted accordingly.
 But this also means, that every Helm release applied to the cluster, requires the registry, where those images were
 pushed to, to be configured as a *[mirror](https://docs.docker.com/registry/recipes/mirror/#configure-the-docker-daemon)*
-on each node. 
+on each node.
+
+++++++++++++++++++++++++++++++++ 
 
 
 ### Deploy with Helm
