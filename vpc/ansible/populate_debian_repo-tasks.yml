@@ -83,10 +83,12 @@
       deb http://security.ubuntu.com/ubuntu bionic-security multiverse
     dest: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d/ubuntu_main.sources.list'
 
-- name: add docker repository to fai repo list
+- name: add docker and elasticsearch repositories to fai repo list
   copy:
     dest: '{{ offline_config_dir }}/fai_etc/apt/sources.list.d/docker.sources.list'
-    content: deb https://download.docker.com/linux/ubuntu/ bionic stable
+    content: |
+      deb https://download.docker.com/linux/ubuntu/ bionic stable
+      deb http://artifacts.elastic.co/packages/oss-6.x/apt stable main
 
 - name: import gpg key for ubuntu
   apt_key:
@@ -98,6 +100,12 @@
 - name: import docker repo gpg key
   apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  become: yes
+
+- name: import elasticsearch repo gpg key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
     state: present
   become: yes
 
@@ -154,6 +162,20 @@
       docker-ce-cli=5:18.09.5~3-0~ubuntu-bionic
       PACKAGES aptitude-r
       docker-ce=5:18.09.5~3-0~ubuntu-bionic
+
+- name: add package config for cassandra
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/cassandra'
+    content: |
+      PACKAGES aptitude-r
+      openjdk-8-jdk libjemalloc1
+
+- name: add package config for elasticsearch
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/elasticsearch'
+    content: |
+      PACKAGES aptitude-r
+      openjdk-8-jdk elasticsearch-oss=6.6.0
 
 - name: add package config for emacs
   copy:
