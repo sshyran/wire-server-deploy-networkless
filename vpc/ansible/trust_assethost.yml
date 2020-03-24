@@ -57,9 +57,7 @@
       raw: 'sudo curl http://{{ second_target_ip }}/{{ fake_domain }}.crt -o /usr/local/share/ca-certificates/{{ fake_domain }}/{{ fake_domain }}.crt'
     - name: update certificate trust store
       raw: 'sudo update-ca-certificates'
-    - name: create docker trust store
-      raw: 'sudo mkdir -p /etc/docker/certs.d/'
-    - name: create directories for fake CA certificates in trust store
+    - name: create directories for fake CA certificates in docker trust store
       raw: 'sudo mkdir -p /etc/docker/certs.d/{{ item }}/'
       with_items:
         - 'k8s.gcr.io'
@@ -67,8 +65,8 @@
         - 'gcr.io'
         - 'quay.io'
         - 'registry-1.docker.io'
-    - name: place fake CA certificates in trust store
-      raw: 'sudo bash -c "openssl s_client -showcerts -servername {{ item }} -connect k8s.gcr.io -port 443 2>&1 </dev/null | sed -ne \"/BEGIN CERT/,/END CERT/p\" > /etc/docker/certs.d/{{ item }}/ca.crt"'
+    - name: place fake CA certificates in docker trust store
+      raw: 'sudo bash -c "openssl s_client -showcerts -servername {{ item }} -connect {{ second_target_ip }} -port 443 2>&1 </dev/null | sed -ne \"/BEGIN CERT/,/END CERT/p\" > /etc/docker/certs.d/{{ item }}/ca.crt"'
       with_items:
         - 'k8s.gcr.io'
         - 'docker.io'
