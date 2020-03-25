@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := default
-SHELL = bash
+SHELL = bash -eo pipefail
 MKFILE_DIR = $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # NOTE: overriding OS-wide environment variables instead of the `HELM_` prefixed ones. Apparently, they don't properly
