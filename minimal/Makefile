@@ -105,7 +105,7 @@ bundle-charts: pull-charts
 .PHONY: bundle-images
 bundle-images: pull-images
 	tar -cf - \
-		./images-tests \
+		./images \
 		./images.manifest \
 		./load-and-push-images.sh \
 		./README.md \
