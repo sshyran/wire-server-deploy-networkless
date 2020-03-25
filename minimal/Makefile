@@ -15,6 +15,8 @@ export XDG_CONFIG_HOME = $(HELM_HOME)/config
 export XDG_DATA_HOME = $(HELM_HOME)/data
 
 
+# TODO: bump this after the next release:
+# note: manually tag backoffice-frontend on quay.io as it doesn't auto-update (https://github.com/zinfra/backend-issues/issues/1151)
 CHARTS_VERSION=0.90.0
 WIRE_SERVER_VERSION=2.76.0
 
@@ -52,7 +54,8 @@ pull-charts: $(HELM_HOME)
 		wire-release/fluent-bit \
 		wire-release/kibana \
 		wire-release/wire-server-metrics \
-		wire-release/backoffice
+		wire-release/backoffice \
+		wire-release/calling-test
 
 
 # NOTE: for each container image list item: pull --> save --> remove

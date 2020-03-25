@@ -73,3 +73,6 @@ quay.io/prometheus/prometheus:v2.10.0
 # backoffice
 quay.io/wire/backoffice-frontend:2.76.0
 quay.io/wire/stern:2.76.0
+
+# calling-test
+quay.io/wire/avs-nwtesttool:1.0.14
