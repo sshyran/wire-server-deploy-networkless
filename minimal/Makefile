@@ -30,7 +30,8 @@ $(HELM_HOME):
 # NOTE: if `--untardir` is a relative path, it gets appended to `--destination`
 #
 .PHONY: pull-charts
-pull-charts: $(HELM_HOME)
+pull-charts: $(MKFILE_DIR)/charts
+$(MKFILE_DIR)/charts: $(HELM_HOME)
 	eval $$(helm env) \
 	&& mkdir -p $$(dirname "$${HELM_REPOSITORY_CACHE}")/charts \
 	&& helm pull \
@@ -62,8 +63,10 @@ pull-charts: $(HELM_HOME)
 #       archive file name convention: REGISTRY_FQDN+IMAGE_REPOSITORY_AND_NAME++IMAGE_TAG.tar.bz2
 # NOTE: sed - filter empty lines and comments
 # NOTE: fqcin - fully qualified container image name
-.SILENT: pull-images
-pull-images:
+.PHONY: pull-images
+pull-images: $(MKFILE_DIR)/images
+.SILENT: $(MKFILE_DIR)/images
+$(MKFILE_DIR)/images:
 	mkdir -p $(MKFILE_DIR)/images
 	registryFqcin='docker.io/library/registry:2' \
 	&& docker pull "$${registryFqcin}" \
@@ -83,7 +86,7 @@ pull-images:
 	done
 
 .PHONY: bundle
-bundle:
+bundle: pull-images pull-charts
 	tar -cf - \
 		./images \
 		./charts \
@@ -91,6 +94,22 @@ bundle:
 		./load-and-push-images.sh \
 		./README.md \
 	> ${MKFILE_DIR}/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar
+
+.PHONY: bundle-charts
+bundle-charts: pull-charts
+	tar -cf - \
+		./charts \
+		./README.md \
+	| gzip > ${MKFILE_DIR}/wire-server_charts-$(CHARTS_VERSION).tar.gz
+
+.PHONY: bundle-images
+bundle-images: pull-images
+	tar -cf - \
+		./images-tests \
+		./images.manifest \
+		./load-and-push-images.sh \
+		./README.md \
+	> ${MKFILE_DIR}/wire-server_images-$(WIRE_SERVER_VERSION).tar
 
 extract:
 	bzip2 --decompress --stdout ${MKFILE_DIR}/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar.bz2 \
