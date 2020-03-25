@@ -22,22 +22,22 @@ docker.io/roffe/kubectl:v1.13.2
 
 # wire-server
 quay.io/wire/account:2124-2.0.2-df000b-v0.24.26-production
-quay.io/wire/brig:2.76.0
-quay.io/wire/cannon:2.76.0
+quay.io/wire/brig:2.77.0
+quay.io/wire/cannon:2.77.0
 docker.io/library/alpine:latest
-quay.io/wire/cargohold:2.76.0
-quay.io/wire/gundeck-schema:2.76.0
-quay.io/wire/brig-schema:2.76.0
-quay.io/wire/galley-schema:2.76.0
-quay.io/wire/spar-schema:2.76.0
+quay.io/wire/cargohold:2.77.0
+quay.io/wire/gundeck-schema:2.77.0
+quay.io/wire/brig-schema:2.77.0
+quay.io/wire/galley-schema:2.77.0
+quay.io/wire/spar-schema:2.77.0
 docker.io/library/busybox:latest
 docker.io/appropriate/curl:latest
-quay.io/wire/galley:2.76.0
-quay.io/wire/gundeck:2.76.0
-quay.io/wire/nginz_disco:2.76.0
-quay.io/wire/nginz:2.76.0
-quay.io/wire/proxy:2.76.0
-quay.io/wire/spar:2.76.0
+quay.io/wire/galley:2.77.0
+quay.io/wire/gundeck:2.77.0
+quay.io/wire/nginz_disco:2.77.0
+quay.io/wire/nginz:2.77.0
+quay.io/wire/proxy:2.77.0
+quay.io/wire/spar:2.77.0
 quay.io/wire/team-settings:13000-2.10.0-3b12f2-v0.24.33-production
 quay.io/wire/webapp:48056-0.1.0-f5e9e8-v0.24.34-production
 
@@ -71,8 +71,8 @@ quay.io/prometheus/prometheus:v2.10.0
 # docker.io/appropriate/curl:latest
 
 # backoffice
-quay.io/wire/backoffice-frontend:2.76.0
-quay.io/wire/stern:2.76.0
+quay.io/wire/backoffice-frontend:2.77.0
+quay.io/wire/stern:2.77.0
 
 # calling-test
 quay.io/wire/avs-nwtesttool:1.0.14

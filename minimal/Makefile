@@ -17,8 +17,8 @@ export XDG_DATA_HOME = $(HELM_HOME)/data
 
 # TODO: bump this after the next release:
 # note: manually tag backoffice-frontend on quay.io as it doesn't auto-update (https://github.com/zinfra/backend-issues/issues/1151)
-CHARTS_VERSION=0.90.0
-WIRE_SERVER_VERSION=2.76.0
+CHARTS_VERSION=0.92.0
+WIRE_SERVER_VERSION=2.77.0
 
 
 
