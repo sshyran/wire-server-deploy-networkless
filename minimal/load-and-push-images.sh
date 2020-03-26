@@ -29,6 +29,14 @@ for imageArchiveFilePath in "${DIR}"/images/*.tar.bz2; do
         continue;
     fi
 
+    echo " [INFO] loading ${imageArchiveFilePath} into cache"
+    returnMessage=$( bzip2 --decompress --stdout "${imageArchiveFilePath}" | docker image load )
+    loadedTagName=$( echo "${returnMessage}" | awk -F' ' '{ print $3 }' )
+
+    echo " [INFO] tagging ${loadedTagName} with ${registry}/${imageName}:${tag}"
+    docker tag "${loadedTagName}" "${registry}/${imageName}:${tag}"
+    docker push "${registry}/${imageName}:${tag}"
+
     # NOTE: any registry configured in `registry-mirrors` only represents a mirror of the docker's
     #       default registry (registry-1.docker.io), which is why any image name that is not prefixed
     #       with a repository has to be prepended with docker's default repository ('library'). Bear
@@ -36,18 +44,13 @@ for imageArchiveFilePath in "${DIR}"/images/*.tar.bz2; do
     #       this behaviour
     if [ "${imageName#*/}" = "${imageName}" ]; then
         imageNameNormalized="library/${imageName}"
+
+        echo " [NOTE] adding also normalized name ${registry}/${imageNameNormalized}:${tag}"
+        docker tag "${loadedTagName}" "${registry}/${imageNameNormalized}:${tag}"
+        docker push "${registry}/${imageNameNormalized}:${tag}"
+
+        docker image remove "${registry}/${imageNameNormalized}:${tag}"
     fi
-
-    echo " [INFO] loading ${imageArchiveFilePath} into cache"
-    returnMessage=$( bzip2 --decompress --stdout "${imageArchiveFilePath}" | docker image load )
-    loadedTagName=$( echo "${returnMessage}" | awk -F' ' '{ print $3 }' )
-
-    echo " [INFO] tagging ${loadedTagName} with ${registry}/${imageName}:${tag}"
-    docker tag "${loadedTagName}" "${registry}/${imageName}:${tag}"
-    docker tag "${loadedTagName}" "${registry}/${imageNameNormalized}:${tag}"
-
-    docker push "${registry}/${imageName}:${tag}"
-    docker push "${registry}/${imageNameNormalized}:${tag}"
 
     docker image remove \
        "${registry}/${imageName}:${tag}" \
