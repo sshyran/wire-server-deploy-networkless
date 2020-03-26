@@ -35,7 +35,7 @@ for imageArchiveFilePath in "${DIR}"/images/*.tar.bz2; do
     #       in mind, that is requires all image references in every chart has to be normalized to follow
     #       this behaviour
     if [ "${imageName#*/}" = "${imageName}" ]; then
-        imageName="library/${imageName}"
+        imageNameNormalized="library/${imageName}"
     fi
 
     echo " [INFO] loading ${imageArchiveFilePath} into cache"
@@ -44,8 +44,10 @@ for imageArchiveFilePath in "${DIR}"/images/*.tar.bz2; do
 
     echo " [INFO] tagging ${loadedTagName} with ${registry}/${imageName}:${tag}"
     docker tag "${loadedTagName}" "${registry}/${imageName}:${tag}"
+    docker tag "${loadedTagName}" "${registry}/${imageNameNormalized}:${tag}"
 
     docker push "${registry}/${imageName}:${tag}"
+    docker push "${registry}/${imageNameNormalized}:${tag}"
 
     docker image remove \
        "${registry}/${imageName}:${tag}" \
