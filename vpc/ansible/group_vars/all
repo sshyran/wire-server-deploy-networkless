@@ -1,11 +1,2 @@
-# wire deployment tool. abstract away khan variables when we are running with bare ansible.
+# the type of deployment tool being used.
 wdt_type: "{{ 'khan' if (khan_env is defined) else 'ansible' }}"
-# infrastructure type. aws == ec2-classic, vpc == ec2-vpc, kvm == kvm.
-wdt_infra: "{{ 'aws' if (khan_env is defined) else 'prompt' }}"
-# environment name.
-wdt_env: "{{ khan_env if (khan_env is defined) else 'prompt' }}"
-# FIXME: describe this.
-wdt_dns: "{{ khan_dns if (khan_env is defined) else 'prompt' }}"
-# region, and the abbreviation for the region. only valid in aws (classic or VPC)
-wdt_region: "{{ khan_region if (khan_region is defined) else 'prompt' }}"
-wdt_region_abbrev: "{{ khan_region_abbrev if (khan_region_abbrev is defined) else 'prompt' }}"

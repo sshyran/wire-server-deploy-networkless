@@ -17,13 +17,13 @@
   tasks:
     - name: prompt for what infrastructure we're using
       import_tasks: prompts/vpc-or-kvm.yml
-      when: wdt_infra == 'prompt'
+      when: wdt_infra is undefined
     - name: prompt for what region we're deploying to
       import_tasks: prompts/region.yml
-      when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
+      when: wdt_region is undefined and wdt_infra == 'vpc'
     - name: prompt for what environment we're deploying to
       import_tasks: prompts/environment.yml
-      when: wdt_env == 'prompt'
+      when: wdt_env is undefined
     - name: prompt for the bastion host, if needed
       import_tasks: prompts/vpc_bastion.yml
       when: wdt_infra == 'vpc'

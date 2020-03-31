@@ -19,13 +19,13 @@
   tasks:
     - name: prompt for what infrastructure we're using
       import_tasks: prompts/vpc-or-kvm.yml
-      when: wdt_infra == 'prompt'
+      when: wdt_infra is undefined
     - name: prompt for what region we're deploying to
       import_tasks: prompts/region.yml
-      when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
+      when: wdt_region is undefined and wdt_infra == 'vpc'
     - name: prompt for what environment we're deploying to
       import_tasks: prompts/environment.yml
-      when: wdt_env == 'prompt'
+      when: wdt_env is undefined
     - name: prompt for the target IP. Must be reachable from the internet
       import_tasks: prompts/first_target.yml
       vars:
@@ -36,7 +36,7 @@
   gather_facts: no
   remote_user: ubuntu
   tasks:
-    - name: download kubernetes static content on target host
+    - name: download minio static content on target host
       include_tasks: populate_backing_services_static_content_minio-tasks.yml
       when: uninstall is not defined
       tags:

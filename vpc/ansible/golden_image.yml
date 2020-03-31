@@ -5,17 +5,23 @@
   tasks:
     - name: prompt for what infrastructure we're using
       import_tasks: prompts/vpc-or-kvm.yml
-      when: wdt_infra == 'prompt'
-    - name: prompt for what region we're deploying to
+      when: wdt_infra is undefined
+    - name: prompt for what AWS region we're deploying to
       import_tasks: prompts/region.yml
-      when: wdt_region == 'prompt' and wdt_infra == 'vpc' 
+      when: wdt_region is undefined and wdt_infra == 'vpc'
     - name: prompt for what environment we're deploying to
       import_tasks: prompts/environment.yml
-      when: wdt_env == 'prompt'
+      when: wdt_env is undefined
     - name: prompt for the target IP
       import_tasks: prompts/first_target.yml
       vars:
         label: the target bastion host
+      when: wdt_type == "ansible"
+    - name: prompt for the target IP
+      import_tasks: prompts/first_target_dns.yml
+      vars:
+        label: the target bastion host
+      when: wdt_type == "khan"
 
 - name: Golden image
   hosts: first_target_host
@@ -25,18 +31,4 @@
   tasks:
     - name: Golden image remote target
       import_tasks: golden_image-tasks.yml
-      when: wdt_type != "khan"
 
-- name: Golden image
-  hosts: '{{ wdt_dns }}'
-  vars_files:
-    - group_vars/all
-  gather_facts: no
-  remote_user: ubuntu
-  pre_tasks:
-    - meta: end_play
-      when: ('dummy' in play_hosts)
-  tasks:
-    - name: Golden image remote target
-      import_tasks: golden_image-tasks.yml
-      when: wdt_type == "khan"

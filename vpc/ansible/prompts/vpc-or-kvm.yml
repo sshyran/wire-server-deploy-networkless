@@ -1,14 +1,26 @@
 ---
-- name: Select KVM or VPC
+# Prompt for the lowest level infrastructure type.
+# optional vars:
+#  possible_infras: A list of items of possible infrastructure types, in lower case.
+# sets: wdt_infra to one of the possible_infras, or fails.
+
+- name: Ensure possible_infras is set
+  set_fact:
+    possible_infras:
+      - 'vpc'
+      - 'kvm'
+  when: possible_infras is not defined
+
+- name: Select infrastructure
   pause:
     prompt: "Are you targeting KVM or an AWS VPC (KVM or VPC?)"
-  register: kvm_or_vpc
+  register: infra
 
 - name: set fact from prompt
   set_fact:
-    wdt_infra: '{{ kvm_or_vpc.user_input | lower }}'
+    wdt_infra: '{{ infra.user_input | lower }}'
 
 - name: ensure response is parsed
-  fail: msg='cannot parse response {{ kvm_or_aws.user_input }}'
-  when: wdt_infra != "vpc" and wdt_infra != "kvm" 
+  fail: msg='cannot parse response {{ infra.user_input }}'
+  when: wdt_infra not in possible_infras 
 
