@@ -34,16 +34,19 @@
   command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: 'create certificate for {{ item }} (2 of 3)'
   command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN={{ item }}"'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: 'create certificate for {{ item }} (3 of 3)'
   command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem -days 500 -sha256'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: create apache configuration
   copy:
@@ -52,6 +55,7 @@
     src: '/etc/apache2/sites-available/default-ssl.conf'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: modify apache configuration to refer to proper ssl certs (1 of 2)
   replace:
@@ -60,6 +64,7 @@
     replace: 'SSLCertificateFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: modify apache configuration to refer to proper ssl certs (2 of 2)
   replace:
@@ -68,22 +73,19 @@
     replace: 'SSLCertificateKeyFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
-- name: modify apache configuration to serve the poetry repository (1 of 2)
+- name: modify apache configuration to serve the {{ item }} (1 of 2)
   blockinfile:
     path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
     block: |
       ServerName {{ item }}
       HostnameLookups Off
-      DocumentRoot {{ offline_content_dir }}/static/{{ item }}
-      <Directory {{ offline_content_dir }}/static/{{ item }}>
-      Options Indexes FollowSymLinks MultiViews
-      Require all granted
-      </Directory>
     insertbefore: </VirtualHost>
   vars:
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: get a list of subdirectories of get.helm.sh to serve.
   find:
@@ -107,6 +109,28 @@
     domain: 'get.helm.sh'
   with_items: '{{ get_helm_sh_targets.files }}'
 
+- name: get a list of subdirectories of get.helm.sh to serve.
+  find:
+    paths: '{{ offline_content_dir }}/helm_repository/'
+    file_type: directory
+    patterns: "*"
+  register: helm_repo_targets
+
+- name: modify apache configuration to serve the helm repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'helm.{{ fake_domain }}'
+  with_items: '{{ helm_repo_targets.files }}'
+
 - name: 'enable apache configuration for {{ item }}'
   file:
     src: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
@@ -114,6 +138,7 @@
     state: link
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
   become: yes
 
 - name: restart apache
@@ -129,6 +154,7 @@
     dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ item }}'
   with_items:
     - 'get.helm.sh'
+    - 'helm.{{ fake_domain }}'
 
 - name: restart DNSMASQ
   systemd:
