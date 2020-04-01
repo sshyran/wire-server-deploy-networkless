@@ -1,13 +1,11 @@
-# This file is meant to provide the 'networkless' environment, which lives in the 'crash' trust zone.
+# This file is meant to define the 'offline' environment, which lives in the 'crash' trust zone.
 # See also https://github.com/zinfra/backend-issues/wiki/trust-zone-environments (TODO: move that page over to either the zinfra/backend-wiki's wiki, or to zinfra/backend-wiki's repository)
 
-# the 'offline' environment
-
-# * VPC with access only via SSH through the bastion host.
-# * private DNS zone crash.zinfra.io
+# What is an Offline VPC?
+# The only host reachable from the outside is a bastion host. It has internet access, and provides SSH services. It can access all of the other hosts in the VPC via SSH only.
 
 # To deploy this file, you will need a user with the policies "AmazonEC2FullAccess", "IAMFullAccess", "AmazonS3FullAccess", and "AmazonDynamoDBFullAccess".
-# FIXME: drill down on the above.
+# FUTUREWORK: drill down on the above.
 
 terraform {
   required_version = ">= 0.12.0"
@@ -25,10 +23,6 @@ terraform {
     dynamodb_table = "z-terraform-state-lock-dynamo-lock-environment-offline"
   }
 }
-
-# there is an example here also:
-# https://github.com/kubernetes-sigs/kubespray/tree/master/contrib/terraform/aws
-# https://github.com/terraform-aws-modules/terraform-aws-vpc/blob/master/examples/complete-vpc/main.tf
 
 # In AWS, (eu-central-1)
 provider "aws" {
@@ -565,22 +559,22 @@ resource "aws_instance" "admin-offline" {
     ]
 }
 
-# our vpn endpoint
-resource "aws_instance" "vpn-offline" {
-  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
-  instance_type = "m3.medium"
-  subnet_id     = "${module.vpc.private_subnets[0]}"
-  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
-  tags = {
-      Name = "vpn-offline",
-      Environment = "offline",
-      Role = "vpn"
-  }
-  vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
-    "${aws_security_group.has_ssh.id}"
-    ]
-}
+## our vpn endpoint
+#resource "aws_instance" "vpn-offline" {
+#  ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
+#  instance_type = "m3.medium"
+#  subnet_id     = "${module.vpc.private_subnets[0]}"
+#  key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
+#  tags = {
+#      Name = "vpn-offline",
+#      Environment = "offline",
+#      Role = "vpn"
+#  }
+#  vpc_security_group_ids = [
+#    "${aws_security_group.assets_from.id}",
+#    "${aws_security_group.has_ssh.id}"
+#    ]
+#}
 
 # our assethost host
 resource "aws_instance" "assethost-offline" {
