@@ -210,8 +210,8 @@ resource "aws_security_group" "has_ssh" {
 }
 
 # A security group for getting resources from the assethost. should be added to all nodes except the bastion host.
-resource "aws_security_group" "assets_from" {
-  name        = "assets_from"
+resource "aws_security_group" "talk_to_assets" {
+  name        = "talk_to_assets"
   description = "hosts that are allowed to request assets from the asset host"
   vpc_id      = module.vpc.vpc_id
 
@@ -256,7 +256,7 @@ resource "aws_security_group" "assets_from" {
     }
 
   tags = {
-    Name = "assets_from"
+    Name = "talk_to_assets"
   }
 }
 
@@ -270,14 +270,14 @@ resource "aws_security_group" "has_assets" {
     from_port   = 53
     to_port     = 53
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.assets_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_assets.id}"]
   }
 
   ingress {
     from_port   = 53
     to_port     = 53
     protocol    = "udp"
-    security_groups = ["${aws_security_group.assets_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_assets.id}"]
   }
 
   # Time
@@ -285,7 +285,7 @@ resource "aws_security_group" "has_assets" {
     from_port   = 123
     to_port     = 123
     protocol    = "udp"
-    security_groups = ["${aws_security_group.assets_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_assets.id}"]
     }
 
   # HTTP
@@ -293,7 +293,7 @@ resource "aws_security_group" "has_assets" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.assets_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_assets.id}"]
     }
 
   # HTTPS
@@ -301,7 +301,7 @@ resource "aws_security_group" "has_assets" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.assets_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_assets.id}"]
     }
 
   tags = {
@@ -309,10 +309,54 @@ resource "aws_security_group" "has_assets" {
   }
 }
 
-# A security group for kubernetes nodes. should be added to them only.
-resource "aws_security_group" "k8s_from" {
-  name        = "k8s_from"
+# A security group for access to kubernetes nodes. should be added to the admin host only.
+resource "aws_security_group" "talk_to_k8s" {
+  name        = "talk_to_k8s"
   description = "hosts that are allowed to speak to kubernetes."
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+  }
+
+  tags = {
+    Name = "talk_to_k8s"
+  }
+}
+
+# A security group for kubernetes nodes. should be added to them only.
+resource "aws_security_group" "k8s_node" {
+  name        = "k8s_node"
+  description = "hosts that have kubernetes."
+  vpc_id      = module.vpc.vpc_id
+
+  # incoming from the admin node (kubectl)
+  ingress {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    security_groups = ["${aws_security_group.talk_to_k8s.id}"]
+  }
+
+  ingress {
+    from_port   = 2379
+    to_port     = 2380
+    protocol    = "tcp"
+    security_groups = ["${aws_security_group.k8s_private.id}"]
+  }
+
+  tags = {
+    Name = "k8s_node"
+  }
+}
+
+# a security group for access to the private traffic between kubernetes nodes. should be added to all kubernetes nodes.
+resource "aws_security_group" "k8s_private" {
+  name        = "k8s_private"
+  description = "hosts that are allowed to the private ports of the kubernetes nodes."
   vpc_id      = module.vpc.vpc_id
 
   egress {
@@ -323,31 +367,14 @@ resource "aws_security_group" "k8s_from" {
   }
 
   tags = {
-    Name = "k8s_from"
+    Name = "k8s_private"
   }
 }
 
-# A security group for kubernetes nodes. should be added to them only.
-resource "aws_security_group" "has_k8s" {
-  name        = "has_k8s"
-  description = "hosts that have kubernetes."
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    from_port   = 2379
-    to_port     = 2380
-    protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_from.id}"]
-  }
-
-  tags = {
-    Name = "has_k8s"
-  }
-}
 
 # A security group for access to the ephemeral services. should be added to all k8s nodes, and the admin node.
-resource "aws_security_group" "ephemeral_from" {
-  name        = "ephemeral_from"
+resource "aws_security_group" "talk_to_ephemeral" {
+  name        = "talk_to_ephemeral"
   description = "hosts that are allowed to speak to the ephemeral services."
   vpc_id      = module.vpc.vpc_id
 
@@ -384,13 +411,13 @@ resource "aws_security_group" "ephemeral_from" {
   }  
 
   tags = {
-    Name = "ephemeral_from"
+    Name = "talk_to_ephemeral"
   }
 }
 
 # A security group for access to the private traffic between ephemeral services. should be added to all ansible nodes.
-resource "aws_security_group" "ephemeral_has" {
-  name        = "ephemeral_has"
+resource "aws_security_group" "ephemeral_private" {
+  name        = "ephemeral_private"
   description = "hosts that are allowed to speak to the private ports of the ephemeral services."
   vpc_id      = module.vpc.vpc_id
 
@@ -435,13 +462,13 @@ resource "aws_security_group" "ephemeral_has" {
   }  
 
   tags = {
-    Name = "ephemeral_has"
+    Name = "ephemeral_private"
   }
 }
 
 # A security group for ephemeral service nodes. should be added to them only.
-resource "aws_security_group" "has_ephemeral" {
-  name        = "has_ephemeral"
+resource "aws_security_group" "ephemeral_node" {
+  name        = "ephemeral_node"
   description = "hosts that host ephemeral services."
   vpc_id      = module.vpc.vpc_id
 
@@ -450,7 +477,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9042
     to_port     = 9042
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_ephemeral.id}"]
   }
 
   # incoming elasticsearch clients.
@@ -458,7 +485,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9200
     to_port     = 9200
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_ephemeral.id}"]
   }
 
   # incoming minio clients.
@@ -466,7 +493,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9000
     to_port     = 9000
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_ephemeral.id}"]
   }
 
   # incoming minio clients.
@@ -474,7 +501,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9092
     to_port     = 9092
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_from.id}"]
+    security_groups = ["${aws_security_group.talk_to_ephemeral.id}"]
   }
 
   # other cassandra nodes (non-TLS)
@@ -482,7 +509,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 7000
     to_port     = 7000
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_has.id}"]
+    security_groups = ["${aws_security_group.ephemeral_private.id}"]
   }
 
   # other cassandra nodes (TLS)
@@ -490,7 +517,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9160
     to_port     = 9160
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_has.id}"]
+    security_groups = ["${aws_security_group.ephemeral_private.id}"]
   }
 
   # other elasticsearch nodes
@@ -498,7 +525,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9300
     to_port     = 9300
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_has.id}"]
+    security_groups = ["${aws_security_group.ephemeral_private.id}"]
   }
 
   # other minio nodes
@@ -506,7 +533,7 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9000
     to_port     = 9000
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_has.id}"]
+    security_groups = ["${aws_security_group.ephemeral_private.id}"]
   }
 
   # other minio nodes
@@ -514,11 +541,11 @@ resource "aws_security_group" "has_ephemeral" {
     from_port   = 9092
     to_port     = 9092
     protocol    = "tcp"
-    security_groups = ["${aws_security_group.ephemeral_has.id}"]
+    security_groups = ["${aws_security_group.ephemeral_private.id}"]
   }
 
   tags = {
-    Name = "has_ephemeral"
+    Name = "ephemeral_node"
   }
 }
 
@@ -553,8 +580,9 @@ resource "aws_instance" "admin-offline" {
   }
   vpc_security_group_ids = [
     "${aws_security_group.ssh_from.id}",
-    "${aws_security_group.assets_from.id}",
-    "${aws_security_group.ephemeral_from.id}",
+    "${aws_security_group.talk_to_assets.id}",
+    "${aws_security_group.talk_to_ephemeral.id}",
+    "${aws_security_group.talk_to_k8s.id}",
     "${aws_security_group.has_ssh.id}"
     ]
 }
@@ -571,7 +599,7 @@ resource "aws_instance" "admin-offline" {
 #      Role = "vpn"
 #  }
 #  vpc_security_group_ids = [
-#    "${aws_security_group.assets_from.id}",
+#    "${aws_security_group.talk_to_assets.id}",
 #    "${aws_security_group.has_ssh.id}"
 #    ]
 #}
@@ -608,11 +636,11 @@ resource "aws_instance" "kubepod1-offline" {
       Role = "kubepod"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
+    "${aws_security_group.talk_to_assets.id}",
     "${aws_security_group.has_ssh.id}",
-    "${aws_security_group.k8s_from.id}",
-    "${aws_security_group.ephemeral_from.id}",
-    "${aws_security_group.has_k8s.id}"
+    "${aws_security_group.k8s_private.id}",
+    "${aws_security_group.talk_to_ephemeral.id}",
+    "${aws_security_group.k8s_node.id}"
     ]
 }
 
@@ -627,11 +655,11 @@ resource "aws_instance" "kubepod2-offline" {
       Role = "kubepod"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
+    "${aws_security_group.talk_to_assets.id}",
     "${aws_security_group.has_ssh.id}",
-    "${aws_security_group.k8s_from.id}",
-    "${aws_security_group.ephemeral_from.id}",
-    "${aws_security_group.has_k8s.id}"
+    "${aws_security_group.k8s_private.id}",
+    "${aws_security_group.talk_to_ephemeral.id}",
+    "${aws_security_group.k8s_node.id}"
     ]
 }
 
@@ -647,11 +675,11 @@ resource "aws_instance" "kubepod3-offline" {
       Role = "kubepod"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
+    "${aws_security_group.talk_to_assets.id}",
     "${aws_security_group.has_ssh.id}",
-    "${aws_security_group.k8s_from.id}",
-    "${aws_security_group.ephemeral_from.id}",
-    "${aws_security_group.has_k8s.id}"
+    "${aws_security_group.k8s_private.id}",
+    "${aws_security_group.talk_to_ephemeral.id}",
+    "${aws_security_group.k8s_node.id}"
     ]
 }
 
@@ -667,9 +695,9 @@ resource "aws_instance" "ansnode1-offline" {
       Role = "ansnode"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
-    "${aws_security_group.has_ephemeral.id}",
-    "${aws_security_group.ephemeral_has.id}",
+    "${aws_security_group.talk_to_assets.id}",
+    "${aws_security_group.ephemeral_node.id}",
+    "${aws_security_group.ephemeral_private.id}",
     "${aws_security_group.has_ssh.id}"
     ]
 }
@@ -685,9 +713,9 @@ resource "aws_instance" "ansnode2-offline" {
       Role = "ansnode"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
-    "${aws_security_group.has_ephemeral.id}",
-    "${aws_security_group.ephemeral_has.id}",
+    "${aws_security_group.talk_to_assets.id}",
+    "${aws_security_group.ephemeral_node.id}",
+    "${aws_security_group.ephemeral_private.id}",
     "${aws_security_group.has_ssh.id}"
     ]
 }
@@ -703,9 +731,9 @@ resource "aws_instance" "ansnode3-offline" {
       Role = "ansnode"
   }
   vpc_security_group_ids = [
-    "${aws_security_group.assets_from.id}",
-    "${aws_security_group.has_ephemeral.id}",
-    "${aws_security_group.ephemeral_has.id}",
+    "${aws_security_group.talk_to_assets.id}",
+    "${aws_security_group.ephemeral_node.id}",
+    "${aws_security_group.ephemeral_private.id}",
     "${aws_security_group.has_ssh.id}"
     ]
 }
