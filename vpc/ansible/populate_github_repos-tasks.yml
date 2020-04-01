@@ -40,6 +40,7 @@
    - 'wireapp/ansible-minio.git'
    - 'wireapp/ansible-restund.git'
    - 'wireapp/ansible-tinc.git'
+   - 'wireapp/ansible-ntp-verify.git'
    - 'elastic/ansible-elasticsearch.git'
    - 'ANXS/hostname.git'
    - 'ANXS/apt.git'
