@@ -191,6 +191,13 @@
       PACKAGES aptitude-r
       nmap
 
+- name: add package config for python3
+  copy:
+    dest: '{{ offline_config_dir }}/fai_config/package_config/python3'
+    content: |
+      PACKAGES aptitude-r
+      python3-pip python3-venv
+
 - name: modify fai-mirror (Codename)
   replace:
     path: /usr/bin/fai-mirror
