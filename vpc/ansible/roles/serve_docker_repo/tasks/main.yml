@@ -133,13 +133,19 @@
     excludes: "*registry_2*"
   register: docker_images
 
+- name: pruning old docker images from the on-system docker daemon.
+  command: docker image prune --all --force
+
 - name: load docker images into docker
-  command: bash -c -x "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | tr '=' '/' )"
+  command: bash -c -x "docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | tr '=' '/' );"
   with_items: '{{ docker_images.files }}'
 
 - name: load docker images from docker into docker registry
   command: bash -c -x "{{ offline_delivery_dir }}/docker-registry/upload_image.sh \"{{ item.path | basename | regex_replace('=.*','') | regex_replace('docker.io','') }}\" $(echo {{ item.path }} | sed '/.*\/[a-z0-9/.]*=.*_.*-amd64.tar.bz2/{s#.*/\(k8s.gcr.io\|docker.io\|gcr.io\|quay.io\|registry-1.docker.io\)=\(.*\)_\(.*\)-amd64.tar.bz2#\2:\3#}' | tr '=' '/')"
   with_items: '{{ docker_images.files }}'
+
+- name: pruning docker images from the on-system docker daemon.
+  command: docker image prune --all --force
 
 - name: 'create certificate for {{ item }} (1 of 3)'
   command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
