@@ -80,9 +80,12 @@
 - name: serialize docker registry image into offline content directory
   command: bash -c "docker image save {{ registry_image_id.stdout }} | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2"
 
+- name: remove docker registry image from local docker
+  command: bash -c "docker image prune --all --force"
+
 - name: include our list of docker images to mirror
   include_vars: 'group_vars/docker_images.yml'
 
 - name: pull down each docker image in our docker image list
-  command: bash -c -x "docker pull --platform=amd64 {{ item.value.name | regex_replace('^docker.io/','') }}:{{ item.value.tag }} ; docker image save $( docker image ls {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }}:{{ item.value.tag }} | grep {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }} | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | tr '/' '=' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image rm {{ item.value.name }}:{{ item.value.tag }}"
+  command: bash -c -x "docker pull --platform=amd64 {{ item.value.name | regex_replace('^docker.io/','') }}:{{ item.value.tag }} ; docker image save $( docker image ls {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }}:{{ item.value.tag }} | grep {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }} | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | tr '/' '=' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image prune --all --force"
   with_dict: '{{ docker_images }}'
