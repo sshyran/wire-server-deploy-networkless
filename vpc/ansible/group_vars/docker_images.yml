@@ -1,25 +1,200 @@
-# created with: cat files/registry/list_of_docker_images.txt  | sort -u | sed "s=\(.*\)/\(.*\):\(.*\)=  \2:\n    name: '\1/\2'\n    tag: '\3'=" >> group_vars/docker_images.yml
-# pruned: library/alpine appropriate/curl and library/busybox, as they are listed twice, once with 'latest' tag, once without
-## then manually add -1,-2,etc to the ones that were grabbed with multiple versions.
 docker_images:
-  fake-sqs:
-    name: 'docker.io/airdock/fake-sqs'
-    tag: '0.3.1'
-  curl:
-    name: 'docker.io/appropriate/curl'
-    tag: 'latest'
-  kubectl:
-    name: 'docker.io/bitnami/kubectl'
-    tag: '1.14.3'
+# Databases-ephemeral
+  cassandra:
+    name: 'docker.io/library/cassandra'
+    tag: '3.11.3'
+  cain:
+    name: 'docker.io/maorfr/cain'
+    tag: '0.6.0'
+  cassandra_exporter:
+    name: 'docker.io/criteord/cassandra_exporter'
+    tag: '2.0.2'
+  elasticsearch:
+    name: 'docker.io/library/elasticsearch'
+    tag: '6.7.1'
   redis:
     name: 'docker.io/bitnami/redis'
     tag: '4.0.6-r1'
-  kube-controllers:
-    name: 'docker.io/calico/kube-controllers'
-    tag: 'v3.4.0'
+  redis_exporter:
+    name: 'docker.io/oliver006/redis_exporter'
+    tag: 'v0.11'
+
+# demo-smtp
+  demo-smtp:
+    name: 'docker.io/namshi/smtp'
+    tag: 'latest'
+
+# fake-aws:
   dynamodb-local:
     name: 'docker.io/cnadiminti/dynamodb-local'
     tag: '2018-04-11'
+  aws-cli:
+    name: 'docker.io/mesosphere/aws-cli'
+    tag: '1.14.5'
+  minio:
+    name: 'docker.io/minio/minio'
+    tag: 'RELEASE.2019-08-07T01-59-21Z'
+  minio-client:
+    name: 'docker.io/minio/mc'
+    tag: 'RELEASE.2019-08-07T23-14-43Z'
+  localstack:
+    name: 'docker.io/localstack/localstack'
+    tag: '0.8.7'
+  fake-sqs:
+    name: 'docker.io/airdock/fake-sqs'
+    tag: '0.3.1'
+
+# reaper:
+  kubectl:
+    name: 'docker.io/roffe/kubectl'
+    tag: 'v1.13.2'
+
+# wire-server:
+  account:
+    name: 'quay.io/wire/account'
+    tag: '2124-2.0.2-df000b-v0.24.26-production'
+  brig:
+    name: 'quay.io/wire/brig'
+    tag: '2.77.0'
+  cannon:
+    name: 'quay.io/wire/cannon'
+    tag: '2.77.0'
+  alpine:
+    name: 'docker.io/library/alpine'
+    tag: 'latest'
+  cargohold:
+    name: 'quay.io/wire/cargohold'
+    tag: '2.77.0'
+  gundeck-schema:
+    name: 'quay.io/wire/gundeck-schema'
+    tag: '2.77.0'
+  brig-schema:
+    name: 'quay.io/wire/brig-schema'
+    tag: '2.77.0'
+  galley-schema:
+    name: 'quay.io/wire/galley-schema'
+    tag: '2.77.0'
+  spar-schema:
+    name: 'quay.io/wire/spar-schema'
+    tag: '2.77.0'
+  busybox:
+    name: 'docker.io/library/busybox'
+    tag: 'latest'
+  curl:
+    name: 'docker.io/appropriate/curl'
+    tag: 'latest'
+  galley:
+    name: 'quay.io/wire/galley'
+    tag: '2.77.0'
+  gundeck:
+    name: 'quay.io/wire/gundeck'
+    tag: '2.77.0'
+  nginz_disco:
+    name: 'quay.io/wire/nginz_disco'
+    tag: '2.77.0'
+  nginz:
+    name: 'quay.io/wire/nginz'
+    tag: '2.77.0'
+  proxy:
+    name: 'quay.io/wire/proxy'
+    tag: '2.77.0'
+  spar:
+    name: 'quay.io/wire/spar'
+    tag: '2.77.0'
+  webapp:
+    name: 'quay.io/wire/webapp'
+    tag: '48056-0.1.0-f5e9e8-v0.24.34-production'
+    
+# Private, disabled.
+#  team-settings:
+#    name: 'quay.io/wire/team-settings'
+#    tag: '13000-2.10.0-3b12f2-v0.24.33-production'
+
+# nginx-ingress-controller
+  nginx-ingress-controller:
+    name: 'quay.io/kubernetes-ingress-controller/nginx-ingress-controller'
+    tag: '0.30.0'
+  defaultbackend-amd64:
+    name: 'k8s.gcr.io/defaultbackend-amd64'
+    tag: '1.5'
+
+# fluent-bit
+  fluent-bit:
+    name: 'docker.io/fluent/fluent-bit'
+    tag: '1.2.2'
+
+# kibana:
+  kibana-oss:
+    name: 'docker.elastic.co/kibana/kibana-oss'
+    tag: '6.7.0'
+  bats:
+    name: 'docker.io/dduportal/bats'
+    tag: '0.4.0'
+  alpine-curl-jq:
+    name: 'docker.io/dwdraju/alpine-curl-jq'
+    tag: 'latest'
+
+# wire-server-metrics:
+  grafana:
+    name: 'docker.io/grafana/grafana'
+    tag: '6.2.5'
+  busybox-1:
+    name: 'docker.io/library/busybox'
+    tag: '1.30'
+  k8s-sidecar:
+    name: 'docker.io/kiwigrid/k8s-sidecar'
+    tag: '0.1.20'
+  kube-state-metrics:
+    name: 'quay.io/coreos/kube-state-metrics'
+    tag: 'v1.6.0'
+  node-exporter:
+    name: 'quay.io/prometheus/node-exporter'
+    tag: 'v0.18.0'
+  hyperkube:
+    name: 'k8s.gcr.io/hyperkube'
+    tag: 'v1.12.1'
+  alertmanager:
+    name: 'quay.io/prometheus/alertmanager'
+    tag: 'v0.17.0'
+  ghostunnel:
+    name: 'docker.io/squareup/ghostunnel'
+    tag: 'v1.4.1'
+  kube-webhook-certgen:
+    name: 'docker.io/jettech/kube-webhook-certgen'
+    tag: 'v1.0.0'
+  prometheus-operator:
+    name: 'quay.io/coreos/prometheus-operator'
+    tag: 'v0.31.1'
+  configmap-reload:
+    name: 'quay.io/coreos/configmap-reload'
+    tag: 'v0.0.1'
+  prometheus-config-reloader:
+    name: 'quay.io/coreos/prometheus-config-reloader'
+    tag: 'v0.31.1'
+  prometheus:
+    name: 'quay.io/prometheus/prometheus'
+    tag: 'v2.10.0'
+
+# backoffice:
+  backoffice:
+    name: 'quay.io/wire/backoffice-frontend'
+    tag: '2.77.0'
+  stern:
+    name: 'quay.io/wire/stern'
+    tag: '2.77.0'
+
+# calling-test:
+  calling-test:
+    name: 'quay.io/wire/avs-nwtesttool'
+    tag: '1.0.14'
+
+# kubernetes, by process of elimination?
+  kubectl-1:
+    name: 'docker.io/bitnami/kubectl'
+    tag: '1.14.3'
+  kube-controllers:
+    name: 'docker.io/calico/kube-controllers'
+    tag: 'v3.4.0'
   coredns:
     name: 'docker.io/coredns/coredns'
     tag: '1.5.0'
@@ -80,57 +255,24 @@ docker_images:
   tiller-1:
     name: 'gcr.io/kubernetes-helm/tiller'
     tag: 'v2.13.1'
-  grafana:
-    name: 'docker.io/grafana/grafana'
-    tag: '5.0.0'
   cluster-proportional-autoscaler-amd64-1:
     name: 'k8s.gcr.io/cluster-proportional-autoscaler-amd64'
     tag: '1.4.0'
-  defaultbackend:
-    name: 'k8s.gcr.io/defaultbackend'
-    tag: '1.4'
   k8s-dns-node-cache:
     name: 'k8s.gcr.io/k8s-dns-node-cache'
     tag: '1.15.1'
   k8s-helm:
     name: 'docker.io/lachlanevenson/k8s-helm'
     tag: 'v2.13.1'
-  alpine:
-    name: 'docker.io/library/alpine'
-    tag: 'latest'
-  busybox:
-    name: 'docker.io/library/busybox'
-    tag: 'latest'
-  cassandra:
-    name: 'docker.io/library/cassandra'
-    tag: '3.11.1'
-  elasticsearch:
-    name: 'docker.io/library/elasticsearch'
-    tag: '6.7.1'
   nginx:
     name: 'docker.io/library/nginx'
     tag: '1.15'
-  localstack:
-    name: 'docker.io/localstack/localstack'
-    tag: '0.8.7'
-  aws-cli:
-    name: 'docker.io/mesosphere/aws-cli'
-    tag: '1.14.5'
   controller:
     name: 'docker.io/metallb/controller'
     tag: 'v0.7.3'
   speaker:
     name: 'docker.io/metallb/speaker'
     tag: 'v0.7.3'
-  minio:
-    name: 'docker.io/minio/minio'
-    tag: 'RELEASE.2019-04-09T01-22-30Z'
-  smtp:
-    name: 'docker.io/namshi/smtp'
-    tag: 'latest'
-  configmap-reload:
-    name: 'quay.io/coreos/configmap-reload'
-    tag: 'v0.0.1'
   etcd:
     name: 'quay.io/coreos/etcd'
     tag: 'v3.2.26'
@@ -143,85 +285,12 @@ docker_images:
   flannel-1:
     name: 'quay.io/coreos/flannel'
     tag: 'v0.11.0'
-  grafana-watcher:
-    name: 'quay.io/coreos/grafana-watcher'
-    tag: 'v0.0.8'
-  prometheus-config-reloader:
-    name: 'quay.io/coreos/prometheus-config-reloader'
-    tag: 'v0.20.0'
-  prometheus-operator:
-    name: 'quay.io/coreos/prometheus-operator'
-    tag: 'v0.20.0'
+#  grafana-watcher:
+#    name: 'quay.io/coreos/grafana-watcher'
+#    tag: 'v0.0.8'
   local-volume-provisioner:
     name: 'quay.io/external_storage/local-volume-provisioner'
     tag: 'v2.1.0'
-  nginx-ingress-controller:
-    name: 'quay.io/kubernetes-ingress-controller/nginx-ingress-controller'
-    tag: '0.22.0'
-  alertmanager:
-    name: 'quay.io/prometheus/alertmanager'
-    tag: 'v0.15.1'
-  node-exporter:
-    name: 'quay.io/prometheus/node-exporter'
-    tag: 'v0.15.2'
-  prometheus:
-    name: 'quay.io/prometheus/prometheus'
-    tag: 'v2.2.1'
-  account:
-    name: 'quay.io/wire/account'
-    tag: '172-0.1.0-846758-v0.20.4-staging'
-  brig:
-    name: 'quay.io/wire/brig'
-    tag: '2.56.0'
-  brig-schema:
-    name: 'quay.io/wire/brig-schema'
-    tag: '2.56.0'
-  cannon:
-    name: 'quay.io/wire/cannon'
-    tag: '2.56.0'
-  cargohold:
-    name: 'quay.io/wire/cargohold'
-    tag: '2.56.0'
-  galley:
-    name: 'quay.io/wire/galley'
-    tag: '2.56.0'
-  galley-schema:
-    name: 'quay.io/wire/galley-schema'
-    tag: '2.56.0'
-  gundeck:
-    name: 'quay.io/wire/gundeck'
-    tag: '2.56.0'
-  gundeck-schema:
-    name: 'quay.io/wire/gundeck-schema'
-    tag: '2.56.0'
-  nginz:
-    name: 'quay.io/wire/nginz'
-    tag: '2.56.0'
-  nginz_disco:
-    name: 'quay.io/wire/nginz_disco'
-    tag: 'latest'
-  proxy:
-    name: 'quay.io/wire/proxy'
-    tag: '2.56.0'
-  spar:
-    name: 'quay.io/wire/spar'
-    tag: '2.56.0'
-  spar-schema:
-    name: 'quay.io/wire/spar-schema'
-    tag: '2.56.0'
-# this always is broken. private repo.
-#  team-settings:
-#    name: 'quay.io/wire/team-settings'
-#    tag: '10445-2.7.0-32c53e-v0.22.0-delete-team'
-#  team-settings-1:
-#    name: 'quay.io/wire/team-settings'
-#    tag: '1.0.5-e5b56a400181ca72d198c616af3eb81010591a8e'
-#  webapp:
-#    name: 'quay.io/wire/webapp'
-#    tag: '1.0.84-a3d49cff206f946b2fdbf0488c14a999cf530105'
-  webapp-1:
-    name: 'quay.io/wire/webapp'
-    tag: '41491-0.1.0-9fe4de-v0.20.2-production'
   local-path-provisioner:
     name: 'docker.io/rancher/local-path-provisioner'
     tag: 'v0.0.2'
