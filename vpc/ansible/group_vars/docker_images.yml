@@ -237,7 +237,7 @@ docker_images:
   kube-scheduler:
     name: 'gcr.io/google-containers/kube-scheduler'
     tag: 'v1.14.2'
-  kube-state-metrics:
+  kube-state-metrics-1:
     name: 'gcr.io/google_containers/kube-state-metrics'
     tag: 'v1.2.0'
   metrics-server-amd64:
