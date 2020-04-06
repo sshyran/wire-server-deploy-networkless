@@ -87,5 +87,6 @@
   include_vars: 'group_vars/docker_images.yml'
 
 - name: pull down each docker image in our docker image list
-  command: bash -c -x "docker pull --platform=amd64 {{ item.value.name | regex_replace('^docker.io/','') }}:{{ item.value.tag }} ; docker image save $( docker image ls {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }}:{{ item.value.tag }} | grep {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }} | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | tr '/' '=' )_{{ item.value.tag }}-amd64.tar.bz2 ; docker image prune --all --force"
+  command: bash -c -x "if [ ! -f {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | tr '/' '=' )_{{ item.value.tag }}-amd64.tar.bz2 ]; then { docker pull --platform=amd64 {{ item.value.name | regex_replace('^docker.io/','') }}:{{ item.value.tag }} ; docker image save $( docker image ls {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }}:{{ item.value.tag }} | grep {{ item.value.name | regex_replace('^docker.io/','') | regex_replace('^library/','') }} | grep {{ item.value.tag }} | awk '{print $3}') | bzip2 -c -9 > {{ offline_content_dir }}/docker_repository/$(echo {{ item.value.name }} | tr '/' '=' )_{{ item.value.tag }}-amd64.tar.bz2 ; } ; else echo 'found image {{ item.value.name }}; not re-downloading.' ; fi ; docker image prune --all --force ;"
   with_dict: '{{ docker_images }}'
+
