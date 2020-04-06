@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -ex
+
 # the registry we are loading content into.
 target_registry="localhost:5001"
 
@@ -11,11 +13,13 @@ function mirror() {
     local source_registry=${3}${3:+/}
     local rmafter=$4
 
-    docker pull $source_registry$prefix$source_image
+    # only pull the image if it is not already loaded.
+    [ -n "`docker image ls $source_registry$prefix$source_image | grep ${source_image%%:*}`" ] || docker pull $source_registry$prefix$source_image
     docker tag $source_registry$prefix$source_image $target_registry/$dest_image
     docker push $target_registry/$dest_image
     [ -n "$rmafter" ] && docker image remove $target_registry/$dest_image
     [ -n "$rmafter" ] && docker image remove $source_registry$prefix$source_image
+    return 0
 }
 
-mirror "$1" "$2" "$3" yes
+mirror "$1" "$2" "$3"
