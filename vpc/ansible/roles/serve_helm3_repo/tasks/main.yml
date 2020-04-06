@@ -87,29 +87,21 @@
     - 'get.helm.sh'
     - 'helm.{{ fake_domain }}'
 
-- name: get a list of subdirectories of get.helm.sh to serve.
-  find:
-    paths: '{{ offline_content_dir }}/static/get.helm.sh/'
-    file_type: directory
-    patterns: "*"
-  register: get_helm_sh_targets
-
 - name: modify apache configuration to serve get.helm.sh (2 of 2)
   blockinfile:
     path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
     block: |
-      alias /{{ item.path | basename }} {{ item.path }}
-      <Directory {{ item.path }}>
+      DocumentRoot {{ offline_content_dir }}/static/get.helm.sh
+      <Directory {{ offline_content_dir }}/static/get.helm.sh>
       Options Indexes FollowSymLinks MultiViews
       Require all granted
       </Directory>
     insertbefore: </VirtualHost>
-    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK get.helm.sh"
   vars:
     domain: 'get.helm.sh'
-  with_items: '{{ get_helm_sh_targets.files }}'
 
-- name: get a list of subdirectories of get.helm.sh to serve.
+- name: get a list of subdirectories of the helm repository.
   find:
     paths: '{{ offline_content_dir }}/helm_repository/'
     file_type: directory
