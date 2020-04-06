@@ -614,7 +614,7 @@ resource "aws_instance" "assethost-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   root_block_device {
-      volume_size = 20
+      volume_size = 40
   }
   tags = {
       Name = "assethost-offline",
@@ -630,7 +630,7 @@ resource "aws_instance" "assethost-offline" {
 # our kubernetes endpoints
 resource "aws_instance" "kubepod1-offline" {
   ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
-  instance_type = "m5.large"
+  instance_type = "m5.xlarge"
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
@@ -649,7 +649,7 @@ resource "aws_instance" "kubepod1-offline" {
 
 resource "aws_instance" "kubepod2-offline" {
   ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
-  instance_type = "m5.large"
+  instance_type = "m5.xlarge"
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
@@ -669,7 +669,7 @@ resource "aws_instance" "kubepod2-offline" {
 # our kubernetes endpoints
 resource "aws_instance" "kubepod3-offline" {
   ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
-  instance_type = "m5.large"
+  instance_type = "m5.xlarge"
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
