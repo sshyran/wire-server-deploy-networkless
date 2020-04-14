@@ -628,15 +628,15 @@ resource "aws_instance" "assethost-offline" {
 }
 
 # our kubernetes endpoints
-resource "aws_instance" "kubepod1-offline" {
+resource "aws_instance" "kubenode1-offline" {
   ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
   instance_type = "m5.xlarge"
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "kubepod1-offline",
+      Name = "kubenode1-offline",
       Environment = "offline",
-      Role = "kubepod"
+      Role = "kubenode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
@@ -647,15 +647,15 @@ resource "aws_instance" "kubepod1-offline" {
     ]
 }
 
-resource "aws_instance" "kubepod2-offline" {
+resource "aws_instance" "kubenode2-offline" {
   ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
   instance_type = "m5.xlarge"
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "kubepod2-offline",
+      Name = "kubenode2-offline",
       Environment = "offline",
-      Role = "kubepod"
+      Role = "kubenode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
@@ -667,15 +667,15 @@ resource "aws_instance" "kubepod2-offline" {
 }
 
 # our kubernetes endpoints
-resource "aws_instance" "kubepod3-offline" {
+resource "aws_instance" "kubenode3-offline" {
   ami           = "${data.aws_ami.ubuntu18LTS-AMD64.id}"
   instance_type = "m5.xlarge"
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "kubepod3-offline",
+      Name = "kubenode3-offline",
       Environment = "offline",
-      Role = "kubepod"
+      Role = "kubenode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
