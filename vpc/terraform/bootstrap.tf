@@ -341,10 +341,19 @@ resource "aws_security_group" "k8s_node" {
     security_groups = ["${aws_security_group.talk_to_k8s.id}"]
   }
 
+  # FIXME: tighten this up.
   ingress {
-    from_port   = 2379
-    to_port     = 2380
+    from_port   = 0
+    to_port     = 65535
     protocol    = "tcp"
+    security_groups = ["${aws_security_group.k8s_private.id}"]
+  }
+
+  # FIXME: tighten this up. need UDP for flannel.
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "udp"
     security_groups = ["${aws_security_group.k8s_private.id}"]
   }
 
@@ -359,10 +368,19 @@ resource "aws_security_group" "k8s_private" {
   description = "hosts that are allowed to the private ports of the kubernetes nodes."
   vpc_id      = module.vpc.vpc_id
 
+  # FIXME: tighten this up.
   egress {
-    from_port   = 2379
-    to_port     = 2380
+    from_port   = 0
+    to_port     = 65535
     protocol    = "tcp"
+    cidr_blocks = ["172.17.0.0/20"]
+  }
+
+  # FIXME: tighten this up. need UDP for flannel.
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "udp"
     cidr_blocks = ["172.17.0.0/20"]
   }
 
