@@ -82,6 +82,8 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook serve_minio_static_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run trust_assethost.yml to load our fake CA's certificate into a target machine, and to use the assethost for DNS resolution.
   * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$adminhost
+* run add_admin.yml to add DNS entries for our admin host to our asset host, so that sudo does not time out.
+  * ansible-playbook add_admin.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=offline.zinfra.io -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$adminhost
 * run golden_image-from_assethost.yml to golden image the adminhost using the repository on the assethost.
   * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$adminhost
 
@@ -113,8 +115,8 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook trust_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e second_target_ip=$assethost -e first_target_ip=$kubepod3
   * ansible-playbook golden_image-from_assethost.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$kubepod3
 
-* Run through https://docs.wire.com/how-to/install/ansible-VMs.html until you get to 'Provisioning virtual machines'.
-* Skip provisioning (as terraform does that for us here), and continue with 'Preparing to run ansible'.
+* SSH into the admin host, and use it as the "Operator's machine" when following the instructions in https://docs.wire.com/how-to/install/ansible-VMs.html. Continue with these instructions until you get to 'Provisioning virtual machines'.
+* At the 'Provisioning virtual machines' section, Skip provisioning (as we have already done that with terraform), and continue with 'Preparing to run ansible'.
 * In the 'Authentication' section, perform the steps in 'Configuring SSH keys'. Continue until you get to 'Use poetry to run ansible, and deploy Elasticsearch'.
   * In the 'ELASTICSEARCH' section of hosts.ini, add the followinh two lines to tell elasticsearch to use our APT mirror.
   ```

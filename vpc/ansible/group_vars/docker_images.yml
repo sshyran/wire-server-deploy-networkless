@@ -104,6 +104,16 @@ docker_images:
   webapp:
     name: 'quay.io/wire/webapp'
     tag: '48056-0.1.0-f5e9e8-v0.24.34-production'
+
+# used to generate secrets for wire-server:
+  alpine-intermediate:
+    name: 'quay.io/wire/alpine-intermediate'
+    tag: 'latest'
+
+# kubernetes debugging. see: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
+  dnsutils:
+    name: 'gcr.io/kubernetes-e2e-test-images/dnsutils'
+    tag: '1.3'
     
 # Private, disabled.
 #  team-settings:
