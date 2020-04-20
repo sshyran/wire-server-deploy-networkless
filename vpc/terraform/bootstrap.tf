@@ -36,7 +36,7 @@ data "aws_security_group" "default" {
 }
 
 module "vpc" {
-  source = "github.com/terraform-aws-modules/terraform-aws-vpc"
+  source = "github.com/terraform-aws-modules/terraform-aws-vpc?ref=v2.33.0"
 
   name = "offline"
 
@@ -51,8 +51,8 @@ module "vpc" {
 
   enable_dhcp_options      = true
   dhcp_options_domain_name = "offline.zinfra.io"
-#  dhcp_options_domain_name_servers = 
-  
+#  dhcp_options_domain_name_servers =
+
   # In case we run terraform from within the environment.
   # VPC endpoint for DynamoDB
   enable_dynamodb_endpoint = true
@@ -65,8 +65,8 @@ module "vpc" {
 
   enable_nat_gateway = true
   one_nat_gateway_per_az = false
-# Use this only in productionish environments.
-#  one_nat_gateway_per_az = true
+  # Use this only in productionish environments.
+# one_nat_gateway_per_az = true
 
   tags = {
     Owner       = "Backend Team"
@@ -103,7 +103,7 @@ data "aws_ami" "ubuntu18LTS-ARM64" {
   }
 
   owners = ["099720109477"] # Canonical
-  }
+}
 
 data "aws_ami" "ubuntu18LTS-AMD64" {
   most_recent = true
@@ -119,7 +119,7 @@ data "aws_ami" "ubuntu18LTS-AMD64" {
   }
 
   owners = ["099720109477"] # Canonical
-  }
+}
 
 # Finding Instance types:
 # https://www.ec2instances.info/
@@ -142,7 +142,7 @@ resource "aws_security_group" "world_ssh_in" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    }
+  }
 
   tags = {
     Name = "world_ssh_in"
@@ -160,13 +160,13 @@ resource "aws_security_group" "world_web_out" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    }
+  }
   egress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    }
+  }
 
   tags = {
     Name = "world_web_out"
@@ -237,7 +237,7 @@ resource "aws_security_group" "talk_to_assets" {
     to_port     = 123
     protocol    = "udp"
     cidr_blocks = ["172.17.0.0/20"]
-    }
+  }
 
   # HTTP
   egress {
@@ -245,7 +245,7 @@ resource "aws_security_group" "talk_to_assets" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["172.17.0.0/20"]
-    }
+  }
 
   # HTTPS
   egress {
@@ -253,7 +253,7 @@ resource "aws_security_group" "talk_to_assets" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["172.17.0.0/20"]
-    }
+  }
 
   tags = {
     Name = "talk_to_assets"
@@ -286,7 +286,7 @@ resource "aws_security_group" "has_assets" {
     to_port     = 123
     protocol    = "udp"
     security_groups = ["${aws_security_group.talk_to_assets.id}"]
-    }
+  }
 
   # HTTP
   ingress {
@@ -294,7 +294,7 @@ resource "aws_security_group" "has_assets" {
     to_port     = 80
     protocol    = "tcp"
     security_groups = ["${aws_security_group.talk_to_assets.id}"]
-    }
+  }
 
   # HTTPS
   ingress {
@@ -302,7 +302,7 @@ resource "aws_security_group" "has_assets" {
     to_port     = 443
     protocol    = "tcp"
     security_groups = ["${aws_security_group.talk_to_assets.id}"]
-    }
+  }
 
   tags = {
     Name = "has_assets"
@@ -426,7 +426,7 @@ resource "aws_security_group" "talk_to_ephemeral" {
     to_port     = 9092
     protocol    = "tcp"
     cidr_blocks = ["172.17.0.0/20"]
-  }  
+  }
 
   tags = {
     Name = "talk_to_ephemeral"
@@ -477,7 +477,7 @@ resource "aws_security_group" "ephemeral_private" {
     to_port     = 9092
     protocol    = "tcp"
     cidr_blocks = ["172.17.0.0/20"]
-  }  
+  }
 
   tags = {
     Name = "ephemeral_private"
@@ -574,18 +574,18 @@ resource "aws_instance" "bastion-offline" {
   subnet_id     = "${module.vpc.public_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   root_block_device {
-      volume_size = 20
+    volume_size = 20
   }
   tags = {
-      Name = "bastion-offline",
-      Environment = "offline",
-      Role = "bastion"
+    Name = "bastion-offline",
+    Environment = "offline",
+    Role = "bastion"
   }
   vpc_security_group_ids = [
     "${aws_security_group.world_ssh_in.id}",
     "${aws_security_group.world_web_out.id}",
     "${aws_security_group.ssh_from.id}"
-    ]
+  ]
 }
 
 # our admin host
@@ -595,9 +595,9 @@ resource "aws_instance" "admin-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "admin-offline",
-      Environment = "offline",
-      Role = "admin"
+    Name = "admin-offline",
+    Environment = "offline",
+    Role = "admin"
   }
   vpc_security_group_ids = [
     "${aws_security_group.ssh_from.id}",
@@ -605,7 +605,7 @@ resource "aws_instance" "admin-offline" {
     "${aws_security_group.talk_to_ephemeral.id}",
     "${aws_security_group.talk_to_k8s.id}",
     "${aws_security_group.has_ssh.id}"
-    ]
+  ]
 }
 
 ## our vpn endpoint
@@ -632,17 +632,17 @@ resource "aws_instance" "assethost-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   root_block_device {
-      volume_size = 40
+    volume_size = 40
   }
   tags = {
-      Name = "assethost-offline",
-      Environment = "offline",
-      Role = "terminator"
+    Name = "assethost-offline",
+    Environment = "offline",
+    Role = "terminator"
   }
   vpc_security_group_ids = [
     "${aws_security_group.has_ssh.id}",
     "${aws_security_group.has_assets.id}",
-    ]
+  ]
 }
 
 # our kubernetes endpoints
@@ -652,9 +652,9 @@ resource "aws_instance" "kubenode1-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "kubenode1-offline",
-      Environment = "offline",
-      Role = "kubenode"
+    Name = "kubenode1-offline",
+    Environment = "offline",
+    Role = "kubenode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
@@ -662,7 +662,7 @@ resource "aws_instance" "kubenode1-offline" {
     "${aws_security_group.k8s_private.id}",
     "${aws_security_group.talk_to_ephemeral.id}",
     "${aws_security_group.k8s_node.id}"
-    ]
+  ]
 }
 
 resource "aws_instance" "kubenode2-offline" {
@@ -671,9 +671,9 @@ resource "aws_instance" "kubenode2-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "kubenode2-offline",
-      Environment = "offline",
-      Role = "kubenode"
+    Name = "kubenode2-offline",
+    Environment = "offline",
+    Role = "kubenode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
@@ -681,7 +681,7 @@ resource "aws_instance" "kubenode2-offline" {
     "${aws_security_group.k8s_private.id}",
     "${aws_security_group.talk_to_ephemeral.id}",
     "${aws_security_group.k8s_node.id}"
-    ]
+  ]
 }
 
 # our kubernetes endpoints
@@ -691,9 +691,9 @@ resource "aws_instance" "kubenode3-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "kubenode3-offline",
-      Environment = "offline",
-      Role = "kubenode"
+    Name = "kubenode3-offline",
+    Environment = "offline",
+    Role = "kubenode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
@@ -701,7 +701,7 @@ resource "aws_instance" "kubenode3-offline" {
     "${aws_security_group.k8s_private.id}",
     "${aws_security_group.talk_to_ephemeral.id}",
     "${aws_security_group.k8s_node.id}"
-    ]
+  ]
 }
 
 # our ephemeral service endpoints
@@ -711,16 +711,16 @@ resource "aws_instance" "ansnode1-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "ansnode1-offline",
-      Environment = "offline",
-      Role = "ansnode"
+    Name = "ansnode1-offline",
+    Environment = "offline",
+    Role = "ansnode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
     "${aws_security_group.ephemeral_node.id}",
     "${aws_security_group.ephemeral_private.id}",
     "${aws_security_group.has_ssh.id}"
-    ]
+  ]
 }
 
 resource "aws_instance" "ansnode2-offline" {
@@ -729,16 +729,16 @@ resource "aws_instance" "ansnode2-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "ansnode2-offline",
-      Environment = "offline",
-      Role = "ansnode"
+    Name = "ansnode2-offline",
+    Environment = "offline",
+    Role = "ansnode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
     "${aws_security_group.ephemeral_node.id}",
     "${aws_security_group.ephemeral_private.id}",
     "${aws_security_group.has_ssh.id}"
-    ]
+  ]
 }
 
 resource "aws_instance" "ansnode3-offline" {
@@ -747,15 +747,15 @@ resource "aws_instance" "ansnode3-offline" {
   subnet_id     = "${module.vpc.private_subnets[0]}"
   key_name      = "${aws_key_pair.crash-nonprod-deployer-julia.key_name}"
   tags = {
-      Name = "ansnode3-offline",
-      Environment = "offline",
-      Role = "ansnode"
+    Name = "ansnode3-offline",
+    Environment = "offline",
+    Role = "ansnode"
   }
   vpc_security_group_ids = [
     "${aws_security_group.talk_to_assets.id}",
     "${aws_security_group.ephemeral_node.id}",
     "${aws_security_group.ephemeral_private.id}",
     "${aws_security_group.has_ssh.id}"
-    ]
+  ]
 }
 
