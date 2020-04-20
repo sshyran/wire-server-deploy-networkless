@@ -36,7 +36,7 @@ data "aws_security_group" "default" {
 }
 
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source = "github.com/terraform-aws-modules/terraform-aws-vpc"
 
   name = "offline"
 
