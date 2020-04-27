@@ -118,7 +118,7 @@ From wire-server-deploy-networkless's /vpc/ansible/
 * SSH into the admin host, and use it as the "Operator's machine" when following the instructions in https://docs.wire.com/how-to/install/ansible-VMs.html. Continue with these instructions until you get to 'Provisioning virtual machines'.
 * At the 'Provisioning virtual machines' section, Skip provisioning (as we have already done that with terraform), and continue with 'Preparing to run ansible'.
 * In the 'Authentication' section, perform the steps in 'Configuring SSH keys'. Continue until you get to 'Use poetry to run ansible, and deploy Elasticsearch'.
-  * In the 'ELASTICSEARCH' section of hosts.ini, add the followinh two lines to tell elasticsearch to use our APT mirror.
+  * In the 'ELASTICSEARCH' section of hosts.ini, add the following two lines to tell elasticsearch to use our APT mirror.
   ```
   es_apt_key = "https://download.docker.com/linux/ubuntu/gpg"
   es_apt_url = "deb [trusted=yes] https://apt.wire.com/apt bionic stable"
