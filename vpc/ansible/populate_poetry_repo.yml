@@ -36,7 +36,7 @@
   gather_facts: no
   remote_user: ubuntu
   tasks:
-    - name: create poe repo on remote target
+    - name: create poetry repo on remote target
       include_tasks: populate_poetry_repo-tasks.yml
       when: uninstall is not defined
 

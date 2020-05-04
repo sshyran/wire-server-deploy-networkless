@@ -100,7 +100,7 @@
   include_vars: 'group_vars/helm_charts.yml'
 
 - name: pull all of the helm charts
-  command: 'helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts {{ item.value.name }}'
+  command: bash -e -c "if [ -e {{ offline_content_dir }}/helm_repository/charts/{{ item.value.name | regex_replace('.*/','') }} ]; then echo Refusing to re-pull helm chart {{ item.value.name }} - chart already pulled. ; else helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts {{ item.value.name }} ; fi; "
   environment:
     XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
     XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'

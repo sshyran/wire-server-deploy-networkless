@@ -21,11 +21,13 @@
   get_url:
     url: 'https://dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum'
     dest: '{{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum'
+    force: yes
 
 - name: download minio client checksum
   get_url:
     url: 'https://dl.minio.io/client/mc/release/linux-amd64/mc.sha256sum'
     dest: '{{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/mc.sha256sum'
+    force: yes
 
 - name: read minio checksum
   command: bash -c 'cat {{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum | sed "s/ .*//"'

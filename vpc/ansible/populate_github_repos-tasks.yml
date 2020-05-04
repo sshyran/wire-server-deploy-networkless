@@ -32,7 +32,7 @@
    - 'kubernetes-sigs'
 
 - name: download all of our github repos.
-  command: bash -e -c 'git clone --bare https://github.com/{{ item }} {{ offline_content_dir }}/static/github.com/{{ item }}; mv {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update.sample {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; chmod a+x {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; cd {{ offline_content_dir }}/static/github.com/{{ item }}/ && git update-server-info'
+  command: bash -e -c 'if [ -d {{ offline_content_dir }}/static/github.com/{{ item }} ]; then echo Refusing to re-download git repository {{ item }} - it is already present; else git clone --bare https://github.com/{{ item }} {{ offline_content_dir }}/static/github.com/{{ item }}; mv {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update.sample {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; chmod a+x {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; cd {{ offline_content_dir }}/static/github.com/{{ item }}/ && git update-server-info ; fi; '
   loop:
    - 'wireapp/wire-server-deploy.git'
    - 'wireapp/wire-server-deploy-networkless'
