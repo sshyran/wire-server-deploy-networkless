@@ -1,0 +1,37 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Ensure offline content directory exists
+  hosts: assethost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: ensure offline_content_dir is set
+      set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+      when: offline_content_dir is undefined
+    - raw: 'mkdir -p {{ offline_content_dir }}'
+
+- name: Copy offline content
+  hosts: bastion
+  gather_facts: no
+  become: no
+  remote_user: ubuntu
+  tasks:
+    - name: ensure offline_content_dir is set
+      set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+      when: offline_content_dir is undefined
+    - name: reset our SSH connection
+      meta: reset_connection
+    - name: rsync offline content to asset host
+      command: |
+       bash -c 'rsync -e "ssh -A -o StrictHostKeyChecking=no" -avrSPX {{ offline_content_dir }}/* ubuntu@{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}:{{ offline_content_dir }}'
+

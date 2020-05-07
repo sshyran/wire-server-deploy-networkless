@@ -1,8 +1,19 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
 - name: populate offline content directory on bastion host
   hosts: bastion
   gather_facts: no
   remote_user: ubuntu
-# FIXME: which of these require become? any of them?
   tasks:
 # FIXME: add tags, so these can be run separately.
     - name: Golden image remote target

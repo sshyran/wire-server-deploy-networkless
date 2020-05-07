@@ -1,0 +1,91 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+# FIXME: add tags, so these can be run separately.
+- name: serve offline content from assethost
+  hosts: assethost
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: move sources.list aside
+      raw: '[ ! -f /etc/apt/sources.list ] || sudo mv /etc/apt/sources.list /etc/apt/sources.list.orig'
+    - name: add local mirror entry
+      raw: sudo bash -c 'echo "deb [trusted=yes] file:///home/ubuntu/offline_content/apt_repository/ bionic stable" > /etc/apt/sources.list.d/local.sources.list'
+    - name: inform apt about the new repository
+      raw: sudo apt update
+    - name: Golden image assethost
+      become: yes
+      import_tasks: golden_image-tasks.yml
+    - name: Setup apache to serve HTTPS on remote target
+      include_role:
+        name: serve_https
+    - name: Setup DNSMASQ on remote target
+      include_role:
+        name: serve_dns
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: Setup NTPD on remote target
+      include_role:
+        name: serve_ntp
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: setup apache to serve debian apt content
+      include_role:
+        name: serve_debian_repo
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: Setup docker to serve content
+      include_role:
+        name: serve_docker_repo
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: Setup apache to serve poetry content
+      include_role:
+        name: serve_poetry_repo
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: Setup to serve static kubernetes content on remote target
+      include_role:
+        name: serve_kubernetes_static_content
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: Setup to serve static helm2 content on remote target
+      include_role:
+        name: serve_helm2_repo
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: serve ansible galaxy content
+      include_role:
+        name: serve_ansible_galaxy_repo
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: Serve static helm3 content
+      include_role:
+        name: serve_helm3_repo
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: serve static cassandra content
+      include_role:
+        name: serve_cassandra_static_content
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+    - name: serve static minio content
+      include_role:
+        name: serve_minio_static_content
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+
+
+
+
+
+

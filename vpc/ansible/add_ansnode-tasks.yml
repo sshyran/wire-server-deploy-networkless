@@ -18,20 +18,23 @@
     msg: 'node_number must be set'
   when: node_number is undefined
 
+- name: ensure node_type is given.
+  fail:
+    msg: 'node_type must be set'
+  when: node_type is undefined
+
 - name: ensure dnsmasq directory exists
   file:
     path: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/'
     state: directory
   become: yes
 
-- name: add DNS entry for ansnode{{ node_number }}
+- name: add DNS entry for {{ node_type }}{{ node_number }}
   copy:
     content: |
       address=/ip-{{ ansnode_ip | replace('.','-')}}.{{ fake_domain }}/{{ ansnode_ip }}
-    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/ansnode{{ node_number }}'
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ node_type }}{{ node_number }}'
 
-#      address=/etcd0{{ node_number }}.{{ fake_domain }}/{{ ansnode_ip }}
-#      address=/ansnode0{{ node_number }}.{{ fake_domain }}/{{ ansnode_ip }}
 - name: restart DNSMASQ
   systemd:
     name: dnsmasq
