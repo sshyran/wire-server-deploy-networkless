@@ -41,6 +41,7 @@
     - name: setup apache to serve debian apt content
       include_role:
         name: serve_debian_repo
+      tags: update_permissions
       vars:
         assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
     - name: Setup docker to serve content
