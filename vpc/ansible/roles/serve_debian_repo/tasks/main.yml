@@ -2,20 +2,24 @@
 - name: ensure offline_content_dir is set
   set_fact: offline_content_dir='/home/ubuntu/offline_content/'
   when: offline_content_dir is undefined
+  tags: update_permissions
 
 - name: ensure offline_delivery_dir is set
   set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
   when: offline_delivery_dir is undefined
+  tags: update_permissions
 
 - name: ensure assethost_ip is given.
   fail:
     msg: 'assethost_ip must be set'
   when: assethost_ip is undefined
+  tags: update_permissions
 
 - name: ensure fake_domain is given.
   fail:
     msg: 'fake_domain must be set'
   when: fake_domain is undefined
+  tags: update_permissions
 
 - name: change permissions on debian repo, for serving via http/https
   file:
@@ -25,6 +29,7 @@
     owner: www-data
     group: www-data
   become: yes
+  tags: update_permissions
 
 - name: 'create certificate for {{ item }} (1 of 3)'
   command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
@@ -78,7 +83,12 @@
       ServerName {{ item }}
       HostnameLookups Off
       alias /apt {{ offline_content_dir }}/apt_repository
+      alias /linux {{ offline_content_dir }}/apt_repository/linux
       <Directory {{ offline_content_dir }}/apt_repository>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+      <Directory {{ offline_content_dir }}/apt_repository/linux>
       Options Indexes FollowSymLinks MultiViews
       Require all granted
       </Directory>
