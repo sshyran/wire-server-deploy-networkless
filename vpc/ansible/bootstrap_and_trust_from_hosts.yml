@@ -75,7 +75,7 @@
     - name: steal and modify cloud-init network config
       raw: sudo bash -c 'cat /etc/netplan/50-cloud-init.yaml | sed  "s/\(.*\)\(dhcp4{{ ":" }} true\)/\1\2\n\1nameservers{{ ":" }}\n\1  addresses{{ ":" }} [{{ groups["assethost"] | map("extract", hostvars, ["ansible_host"]) | join(",") }}]\n\1dhcp4-overrides{{ ":" }}\n\1  use-dns{{ ":" }} no/" >> /etc/netplan/offline.yaml'
     - name: use new networking config
-      raw: sudo netplan apply
+      raw: '[ -f /usr/sbin/netplan ] && sudo netplan apply || /bin/true'
     - name: move sources.list aside
       raw: '[ ! -f /etc/apt/sources.list ] || sudo mv /etc/apt/sources.list /etc/apt/sources.list.orig'
     - name: add assethost mirror entry
