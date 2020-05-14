@@ -135,7 +135,7 @@
     dest: '{{ offline_config_dir }}/fai_config/package_config/goldenimage'
     content: |
       PACKAGES aptitude-r
-      gdebi-core ngrep ntp plymouth-disabler sysstat tree nload resolvconf
+      gdebi-core ngrep ntp plymouth-disabler sysstat tree nload resolvconf mdadm
 
 - name: add package config for ansible
   copy:
@@ -168,7 +168,7 @@
     dest: '{{ offline_config_dir }}/fai_config/package_config/cassandra'
     content: |
       PACKAGES aptitude-r
-      openjdk-8-jdk libjemalloc1
+      openjdk-8-jdk libjemalloc1 policykit-1
 
 - name: add package config for elasticsearch
   copy:
@@ -254,3 +254,13 @@
   get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
     dest: '{{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/gpg'
+
+- name: create offline content directory for docker gpg key
+  file:
+    path: '{{ offline_content_dir }}/apt_repository/linux/ubuntu/'
+    state: directory
+
+- name: grab a copy of the docker gpg key
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: '{{ offline_content_dir }}/apt_repository/linux/ubuntu/gpg'
