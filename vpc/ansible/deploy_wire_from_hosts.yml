@@ -142,6 +142,7 @@
       command: 'helm upgrade --install minio-external wire/minio-external -f values/minio-external/values.yaml --wait'
       args:
         chdir: '/home/ubuntu/wire-server-deploy/'
+      when: '"minio" in groups and groups["minio"]'
       tags: deploy_helm_chart_minio
 ## FUTUREWORK: look at the cassandra, redis, and elasticsearch groups, and fill this out dynamically.
     - name: create values file for databases-ephemeral
@@ -168,6 +169,29 @@
       args:
         chdir: '/home/ubuntu/wire-server-deploy/'
       tags: deploy_fake_aws
+    - name: create container directory for wire-server-configs
+      file:
+        path: /home/ubuntu/wire-server-deploy/my-wire-server
+        state: directory
+      tags: config_wire_server
+    - name: copy wire-server configs (values)
+      copy:
+        remote_src: True
+        src: '/home/ubuntu/wire-server-deploy/values/wire-server/prod-values.example.yaml'
+        dest: '/home/ubuntu/wire-server-deploy/my-wire-server/values.yaml'
+      tags: config_wire_server
+    - name: copy wire-server configs (secrets)
+      copy:
+        remote_src: True
+        src: '/home/ubuntu/wire-server-deploy/values/wire-server/prod-secrets.example.yaml'
+        dest: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+      tags: config_wire_server
+    - name: change domain name
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/values.yaml'
+        regexp: 'example.com'
+        replace: '{{ real_domain }}'
+      tags: config_wire_server
     - name: configure demo-smtp
       copy:
         dest: '/home/ubuntu/wire-server-deploy/values/demo-smtp/values.yaml'
@@ -179,3 +203,115 @@
       args:
         chdir: '/home/ubuntu/wire-server-deploy/'
       tags: deploy_demo_smtp
+    - name: supply dns domain name to helm charts
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/values.yaml'
+        regexp: 'example.com'
+        replace: '{{ real_domain }}'
+      tags: config_wire_server
+    - name: remove teams configuration
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/values.yaml'
+        regexp: '.*teamSettings:.*\n'
+        replace: ''
+      tags: config_wire_server
+    - name: create a secret for restund
+      command: 'bash -c "openssl rand -base64 64 | env LC_CTYPE=C tr -dc a-zA-Z0-9 | head -c 42 > my-wire-server/restund.txt"'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      tags: rekey_restund
+    - name: install docker-ce
+      apt:
+        name: docker-ce
+      become: yes
+      tags: rekey_zauth
+    - name: create a secret for zauth
+      command: 'bash -c "docker run --rm quay.io/wire/alpine-intermediate /dist/zauth -m gen-keypair -i 1 > my-wire-server/zauth.txt"'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      become: yes
+      tags: rekey_zauth
+    - name: read restund secret
+      command: bash -c 'cat my-wire-server/restund.txt'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      register: restund_secret
+      tags: rekey_restund
+    - name: read zauth public
+      command: bash -c 'cat my-wire-server/zauth.txt | sed -n "s/public. //p"'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      register: zauth_public
+      tags: rekey_zauth
+    - name: read zauth public
+      command: bash -c 'cat my-wire-server/zauth.txt | sed -n "s/secret. //p"'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      register: zauth_private
+      tags: rekey_zauth
+    - name: place restund secret in wire-server secrets.yaml
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+        before: 'awsKeyId:'
+        after: 'turn:'
+        regexp: '(.*)secret.*'
+        replace: '\1secret: {{ restund_secret.stdout }}'
+      tags: rekey_restund
+    - name: place zauth public secret in wire-server secrets.yaml
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+        before: 'turn:'
+        after: 'zAuth:'
+        regexp: '<public key>'
+        replace: '{{ zauth_public.stdout }}'
+      tags: rekey_zauth
+    - name: place zauth private secret in wire-server secrets.yaml
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+        before: 'turn:'
+        after: 'zAuth:'
+        regexp: '<private key>'
+        replace: '{{ zauth_private.stdout }}'
+      tags: rekey_zauth
+    - name: place zauth public secret in wire-server secrets.yaml
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+        before: 'basicAuth:'
+        after: 'nginz:'
+        regexp: '<public key>'
+        replace: '{{ zauth_public.stdout }}'
+      tags: rekey_zauth
+    - name: install wire-server
+      command: 'helm upgrade --install wire-server wire/wire-server -f my-wire-server/values.yaml -f my-wire-server/secrets.yaml --wait'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      tags: deploy_helm_chart_wire_server
+    - name: create container directory for ingress configs
+      file:
+        path: /home/ubuntu/wire-server-deploy/my-nginx-ingress
+        state: directory
+      tags: config_ingress
+    - name: copy nginx-ingress configs (values)
+      copy:
+        remote_src: True
+        src: '/home/ubuntu/wire-server-deploy/values/nginx-ingress-services/prod-values.example.yaml'
+        dest: '/home/ubuntu/wire-server-deploy/my-nginx-ingress/values.yaml'
+      tags: config_ingress
+    - name: copy wire-server configs (secrets)
+      copy:
+        remote_src: True
+        src: '/home/ubuntu/wire-server-deploy/values/nginx-ingress-services/prod-secrets.example.yaml'
+        dest: '/home/ubuntu/wire-server-deploy/my-nginx-ingress/secrets.yaml'
+      tags: config_ingress
+    - name: change domain name
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-nginx-ingress/values.yaml'
+        regexp: 'example.com'
+        replace: '{{ real_domain }}'
+      tags: config_ingress
+    - name: pull nginz-
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-nginx-ingress/values.yaml'
+        regexp: 'nginz-'
+        replace: ''
+      tags: config_ingress
