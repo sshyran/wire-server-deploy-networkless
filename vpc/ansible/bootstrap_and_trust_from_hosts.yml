@@ -15,7 +15,7 @@
   gather_facts: no
   remote_user: ubuntu
   tasks:
-    - name: create DNSMASQ entry on asset host
+    - name: create DNSMASQ entry for admin node on asset host
       include_tasks: add_admin-tasks.yml
       vars:
         admin_ip: '{{ item }}'
@@ -35,6 +35,7 @@
         node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
         node_type: "cassandra"
       with_items: "{{ target_hosts.split(' ') }}"
+      when: '"cassandra" in groups and groups["cassandra"]'
 
 - name: add DNSMASQ entry for elasticsearch hosts
   hosts: assethost
@@ -50,6 +51,23 @@
         node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
         node_type: "elasticsearch"
       with_items: "{{ target_hosts.split(' ') }}"
+      when: '"elasticsearch" in groups and groups["elasticsearch"]'
+
+- name: add DNSMASQ entry for minio hosts
+  hosts: assethost
+  gather_facts: no
+  remote_user: ubuntu
+  vars:
+    target_hosts: "{{ groups['minio'] | join(' ') }}"
+  tasks:
+    - name: create DNSMASQ entry on asset host
+      include_tasks: add_ansnode-tasks.yml
+      vars:
+        ansnode_ip: '{{ hostvars[item].ansible_host }}'
+        node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
+        node_type: "minio"
+      with_items: "{{ target_hosts.split(' ') }}"
+      when: '"minio" in groups and groups["minio"]'
 
 - name: add DNSMASQ entry for kubernetes hosts
   hosts: assethost
@@ -64,9 +82,10 @@
         kubenode_ip: '{{ hostvars[item].ansible_host }}'
         node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
       with_items: "{{ target_hosts.split(' ') }}"
+      when: '"kube-kubenode" in groups and groups["kube-kubenode"]'
 
-- name: serve offline content from assethost
-  hosts: admin, cassandra, elasticsearch, kube-kubenode
+- name: use offline content from assethost
+  hosts: admin, cassandra, elasticsearch, minio, kube-kubenode
   gather_facts: no
   remote_user: ubuntu
   tasks:
@@ -113,4 +132,3 @@
         - 'gcr.io'
         - 'quay.io'
         - 'registry-1.docker.io'
-      
