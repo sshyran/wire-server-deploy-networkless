@@ -55,28 +55,34 @@ docker_images:
     tag: '2124-2.0.2-df000b-v0.24.26-production'
   brig:
     name: 'quay.io/wire/brig'
-    tag: '2.77.0'
+    tag: '2.83.0'
   cannon:
     name: 'quay.io/wire/cannon'
-    tag: '2.77.0'
+    tag: '2.83.0'
   alpine:
     name: 'docker.io/library/alpine'
     tag: 'latest'
   cargohold:
     name: 'quay.io/wire/cargohold'
-    tag: '2.77.0'
+    tag: '2.83.0'
   gundeck-schema:
     name: 'quay.io/wire/gundeck-schema'
-    tag: '2.77.0'
+    tag: '2.83.0'
   brig-schema:
     name: 'quay.io/wire/brig-schema'
-    tag: '2.77.0'
+    tag: '2.83.0'
+  brig-index:
+    name: 'quay.io/wire/brig-index'
+    tag: '2.83.0'
   galley-schema:
     name: 'quay.io/wire/galley-schema'
-    tag: '2.77.0'
+    tag: '2.83.0'
+  galley-migrate-data:
+    name: 'quay.io/wire/galley-migrate-data'
+    tag: '2.83.0'
   spar-schema:
     name: 'quay.io/wire/spar-schema'
-    tag: '2.77.0'
+    tag: '2.83.0'
   busybox:
     name: 'docker.io/library/busybox'
     tag: 'latest'
@@ -85,22 +91,22 @@ docker_images:
     tag: 'latest'
   galley:
     name: 'quay.io/wire/galley'
-    tag: '2.77.0'
+    tag: '2.83.0'
   gundeck:
     name: 'quay.io/wire/gundeck'
-    tag: '2.77.0'
+    tag: '2.83.0'
   nginz_disco:
     name: 'quay.io/wire/nginz_disco'
-    tag: '2.77.0'
+    tag: '2.83.0'
   nginz:
     name: 'quay.io/wire/nginz'
-    tag: '2.77.0'
+    tag: '2.83.0'
   proxy:
     name: 'quay.io/wire/proxy'
-    tag: '2.77.0'
+    tag: '2.83.0'
   spar:
     name: 'quay.io/wire/spar'
-    tag: '2.77.0'
+    tag: '2.83.0'
   webapp:
     name: 'quay.io/wire/webapp'
     tag: '48056-0.1.0-f5e9e8-v0.24.34-production'
@@ -185,13 +191,14 @@ docker_images:
     name: 'quay.io/prometheus/prometheus'
     tag: 'v2.10.0'
 
+# FIXME: what does the release process for the backoffice-frontend look like?
 # backoffice:
   backoffice:
     name: 'quay.io/wire/backoffice-frontend'
     tag: '2.77.0'
   stern:
     name: 'quay.io/wire/stern'
-    tag: '2.77.0'
+    tag: '2.83.0'
 
 # calling-test:
   calling-test:
