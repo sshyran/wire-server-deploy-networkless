@@ -23,22 +23,26 @@
   become: yes
 
 - name: update apt cache
-  apt: update_cache=yes
+  apt:
+    update_cache: yes
   become: yes
 
 - name: install fai-server
   apt:
     name: fai-server
+    install_recommends: no
   become: yes
 
 - name: install reprepro
   apt:
     name: reprepro
+    install_recommends: no
   become: yes
 
 - name: install aptitude
   apt:
     name: aptitude
+    install_recommends: no
   become: yes
 
 - name: create offline content directory for debian packages
