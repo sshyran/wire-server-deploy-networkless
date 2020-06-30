@@ -1,0 +1,271 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: ensure assethost_ip is given.
+  fail:
+    msg: 'assethost_ip must be set'
+  when: assethost_ip is undefined
+
+- name: ensure fake_domain is given.
+  fail:
+    msg: 'fake_domain must be set'
+  when: fake_domain is undefined
+
+- name: update apt cache
+  apt: update_cache=yes
+  become: yes
+
+- name: install docker-ce
+  apt:
+   name: docker-ce
+  become: yes
+
+- name: install docker-ce-cli
+  apt:
+   name: docker-ce-cli
+  become: yes
+
+- name: install containerd.io
+  apt:
+   name: containerd.io
+  become: yes
+
+- name: enable use of docker by the ubuntu user
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+  become: yes
+
+- name: enable use of experimental docker features
+  replace:
+    path: /lib/systemd/system/docker.service
+    regexp: 'ExecStart=/usr/bin/dockerd -H fd://'
+    replace: 'ExecStart=/usr/bin/dockerd -H fd:// --experimental=true'
+  become: yes
+
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: reset SSH connections
+  meta: reset_connection
+
+- name: restore docker registry image from offline content directory
+  command: bash -c "cat {{ offline_content_dir }}/docker_repository/registry_2-amd64.tar.bz2 | bzip2 -c -d | docker image load"
+  register: docker_load_out
+
+- name: find the image ID of the docker registry image
+  command: bash -c "echo {{ docker_load_out.stdout }} | sed 's/.*://'"
+  register: registry_image_id
+
+- name: tag docker registry image
+  command: docker tag {{ registry_image_id.stdout }} registry:2
+
+- name: create home for docker registry
+  file:
+    path: '{{ offline_delivery_dir }}/docker-registry'
+    state: directory
+
+- name: create directory tree
+  file:
+    path: "{{ offline_delivery_dir }}/docker-registry/{{ item }}"
+    state: directory
+  with_items:
+    - /certs
+    - /images
+
+- name: copy bash scripts
+  copy:
+    src: 'files/registry/{{ item }}'
+    dest: '{{ offline_delivery_dir }}/docker-registry/{{ item }}'
+    mode: 0755
+  with_items:
+    - images.sh
+    - upload_image.sh
+    - registry-run.sh
+    - list_of_docker_images.txt
+    - mk-sub-certificate
+
+- name: 'create certificate for docker.{{ fake_domain }} (1 of 3)'
+  command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key 2048'
+
+- name: 'create certificate for docker.{{ fake_domain }} (2 of 3)'
+  command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/docker.{{ fake_domain }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN=docker.{{ fake_domain }}"'
+
+- name: 'create certificate for docker.{{ fake_domain }} (3 of 3)'
+  command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/docker.{{ fake_domain }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/docker.{{ fake_domain }}.pem -days 500 -sha256'
+
+- name: 'copy docker.{{ fake_domain }} certificate to where the registry wants it'
+  copy:
+    dest: '{{ offline_delivery_dir }}/docker-registry/certs/client.crt'
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/docker.{{ fake_domain }}.pem'
+    remote_src: yes
+
+- name: 'copy docker.{{ fake_domain }} key to where the registry wants it'
+  copy:
+    dest: '{{ offline_delivery_dir }}/docker-registry/certs/client.key'
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/docker.{{ fake_domain }}.key'
+    remote_src: yes
+
+- name: start offline docker registry
+  command: 'bash -c "{{ offline_delivery_dir }}/docker-registry/registry-run.sh || true"'
+  args:
+    chdir: '{{ offline_delivery_dir }}/docker-registry/'
+
+- name: get a list of docker images to load into docker
+  find:
+    paths: '{{ offline_content_dir }}/docker_repository/'
+    patterns: "*.bz2"
+    excludes: "*registry_2*"
+  register: docker_images
+
+#- name: pruning old docker images from the on-system docker daemon.
+#  command: docker image prune --all --force
+
+- name: load docker images into docker
+  command: bash -c -x "if [ -n `docker image ls $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | tr '=' '/' | sed 's=\(docker.io/\)==' | sed 's=\(library/\)==') | grep $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1=' | sed 's/[^=]*=//' | tr = / | sed 's=\(docker.io/\)==' | sed 's=\(library/\)==' )` ] ; then { docker image tag `echo $(cat {{ item.path }} | bzip2 -d | docker image load) | sed 's/.*://'` $(echo {{ item.path }} | sed 's=.*/\(.*\)_\(.*\)-amd64.tar.bz2=\1:\2=' | tr '=' '/' ); } else echo 'not loading image, already loaded.' ; fi ;"
+  with_items: '{{ docker_images.files }}'
+
+- name: load docker images from docker into docker registry
+  command: bash -c -x "{{ offline_delivery_dir }}/docker-registry/upload_image.sh \"{{ item.path | basename | regex_replace('=.*','') | regex_replace('docker.io','') }}\" $(echo {{ item.path }} | sed '/.*\/[^=]*=.*_.*-amd64.tar.bz2/{s#.*/\(docker.elastic.co\|k8s.gcr.io\|docker.io\|gcr.io\|quay.io\|registry-1.docker.io\)=\(.*\)_\(.*\)-amd64.tar.bz2#\2:\3#}' | tr '=' '/')"
+  with_items: '{{ docker_images.files }}'
+
+#- name: pruning docker images from the on-system docker daemon.
+#  command: docker image prune --all --force
+
+- name: 'create certificate for {{ item }} (1 of 3)'
+  command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
+  with_items:
+    - 'k8s.gcr.io'
+    - 'docker.io'
+    - 'gcr.io'
+    - 'quay.io'
+    - 'registry-1.docker.io'
+
+- name: 'create certificate for {{ item }} (2 of 3)'
+  command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN={{ item }}"'
+  with_items:
+    - 'k8s.gcr.io'
+    - 'docker.io'
+    - 'gcr.io'
+    - 'quay.io'
+    - 'registry-1.docker.io'
+
+- name: 'create certificate for {{ item }} (3 of 3)'
+  command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem -days 500 -sha256'
+  with_items:
+    - 'k8s.gcr.io'
+    - 'docker.io'
+    - 'gcr.io'
+    - 'quay.io'
+    - 'registry-1.docker.io'
+
+- name: create apache config
+  copy:
+    content: |
+      <VirtualHost _default_:443>
+          ServerName {{ item }}
+          <Proxy *>
+              Order deny,allow
+              Allow from all
+          </Proxy>
+          SSLEngine on
+          SSLProxyEngine On
+          SSLCertificateFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem
+          SSLCertificateKeyFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key
+          SSLCACertificateFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt
+          SSLProxyCheckPeerName off
+          ProxyRequests Off
+          ProxyPreserveHost On
+          ProxyPass / https://localhost:5001/
+          ProxyPassReverse / https://localhost:5001/
+      </VirtualHost>
+    dest: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+  with_items:
+    - 'k8s.gcr.io'
+    - 'docker.io'
+    - 'gcr.io'
+    - 'quay.io'
+    - 'registry-1.docker.io'
+
+- name: 'enable apache configuration for {{ item }}'
+  file:
+    src: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    dest: '/etc/apache2/sites-enabled/000-{{ item }}.conf'
+    state: link
+  with_items:
+    - 'k8s.gcr.io'
+    - 'docker.io'
+    - 'gcr.io'
+    - 'quay.io'
+    - 'registry-1.docker.io'
+  become: yes
+
+- name: enable apache proxying
+  command: a2enmod proxy
+  become: yes
+
+- name: enable apache proxying http protocol
+  command: a2enmod proxy_http
+  become: yes
+
+- name: create system directory for our fake certificate
+  file:
+    dest: '/usr/local/share/ca-certificates/{{ fake_domain }}'
+    state: directory
+  become: yes
+
+- name: copy our fake certificate into the system
+  copy:
+    dest: '/usr/local/share/ca-certificates/{{ fake_domain }}/{{ fake_domain }}.crt'
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt'
+    remote_src: yes
+  become: yes
+
+- name: re-index system certificate store
+  command: update-ca-certificates
+  become: yes
+
+- name: restart apache
+  systemd:
+    name: apache2
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: add DNS entry for fake domain
+  copy:
+    content: 'address=/registry-1.{{ fake_domain }}/{{ assethost_ip }}'
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/registry-1.{{ fake_domain }}'
+
+- name: add DNS entry for {{ item }}
+  copy:
+    content: 'address=/{{ item }}/{{ assethost_ip }}'
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ item }}'
+  with_items:
+    - 'k8s.gcr.io'
+    - 'docker.io'
+    - 'gcr.io'
+    - 'quay.io'
+    - 'registry-1.docker.io'
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes

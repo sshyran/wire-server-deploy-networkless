@@ -37,6 +37,9 @@ Follow the instructions in 'Raw Content/HTTPS' to serve our git-poetry.py script
  * point the '/sdispater' directory of raw.githubusercontent.com to $CONTENTHOME/sdispater .
  * populate the content by using curl to download https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py, placing it at $CONTENTHOME/sdispater/poetry/master/get-poetry.py .
 
+#### Poetry Repository
+
+Follow the directions in 'Repositories/Poetry Repository' 
 
 ### Ansible
 
@@ -751,12 +754,6 @@ Since the last step set up our fake github.com, we are only going to need to add
 
 #### Populating the repository
 
-* Make a directory for holding our git repo. for this example, we're going to be mirroring wire-server-deploy.
-```
-export ORG=wireapp
-mkdir -p /home/wire/docker-squid4/docker-squid/$ORG
-```
-
 * populate the repo:
 ```
 export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
@@ -1041,7 +1038,7 @@ The galaxy rest API stores a definition of it's server version, and protocol ver
 ```
 export CONTENTHOME=/home/wire/docker-squid4/docker-squid/
 export REPOPATH=$CONTENTHOME/galaxy_repository/api/
-echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $repopath/index.html
+echo '{"description":"GALAXY REST API","current_version":"v1","available_versions":{"v1":"/api/v1/","v2":"/api/v2/"},"server_version":"3.3.0","version_name":"Doin' it Right","team_members":["chouseknecht","cutwater","alikins","newswangerd","awcrosby","tima","gregdek"]}' > $REPOPATH/index.html
 ```
 
 The next endpoint we have to serve is /api/v1/roles. you can query for a specific role by name:

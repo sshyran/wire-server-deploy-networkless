@@ -1,0 +1,69 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Include Prompts
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: prompt for what infrastructure we're using
+      import_tasks: prompts/vpc-or-kvm.yml
+      when: wdt_infra is undefined
+    - name: prompt for what region we're deploying to
+      import_tasks: prompts/region.yml
+      when: wdt_region is undefined and wdt_infra == 'vpc'
+    - name: prompt for what environment we're deploying to
+      import_tasks: prompts/environment.yml
+      when: wdt_env is undefined
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/vpc_bastion.yml
+      vars:
+        agent: true
+      when: wdt_infra == 'vpc'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/kvm_bastion.yml
+      vars:
+        agent: true
+      when: bastion_eip is not defined and wdt_infra == 'kvm'
+    - name: prompt for the target IP
+      import_tasks: prompts/first_target.yml
+      vars:
+        label: the admin host
+    - name: prompt for the asset host IP
+      import_tasks: prompts/second_target.yml
+      vars:
+        label: the asset host
+    - name: prompt for the fake domain name
+      import_tasks: prompts/fake_domain.yml
+      when: fake_domain is not defined
+
+- name: add DNSMASQ entry for admin
+  hosts: second_target_host
+  gather_facts: no
+  tasks:
+  remote_user: ubuntu
+  tasks:
+    - name: create DNSMASQ entry on asset host
+      include_tasks: add_admin-tasks.yml
+      when: uninstall is not defined
+      vars:
+        fake_domain: '{{ dns_domain }}'
+        admin_ip: '{{ first_target_ip }}'
+
+- name: Destroy admin DNSMASQ entry
+  hosts: second_target_host
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: destroy DNSMASQ entry on asset host
+      include_tasks: populate_ansible_galaxy_repo-uninstall.yml
+      when: uninstall is defined

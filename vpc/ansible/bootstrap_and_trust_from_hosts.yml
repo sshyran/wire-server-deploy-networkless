@@ -1,0 +1,134 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: add DNSMASQ entry for admin
+  hosts: assethost
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: create DNSMASQ entry for admin node on asset host
+      include_tasks: add_admin-tasks.yml
+      vars:
+        admin_ip: '{{ item }}'
+      with_items: "{{ groups['admin'] | map('extract', hostvars, ['ansible_host']) | join(' ') }}"
+
+- name: add DNSMASQ entry for cassandra hosts
+  hosts: assethost
+  gather_facts: no
+  vars:
+    target_hosts: "{{ groups['cassandra'] | join (' ') }}"
+  remote_user: ubuntu
+  tasks:
+    - name: create reverse dns entry for cassandra nodes on asset host
+      include_tasks: add_ansnode-tasks.yml
+      vars:
+        ansnode_ip: "{{ hostvars[item].ansible_host }}"
+        node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
+        node_type: "cassandra"
+      with_items: "{{ target_hosts.split(' ') }}"
+      when: '"cassandra" in groups and groups["cassandra"]'
+
+- name: add DNSMASQ entry for elasticsearch hosts
+  hosts: assethost
+  gather_facts: no
+  remote_user: ubuntu
+  vars:
+    target_hosts: "{{ groups['elasticsearch'] | join(' ') }}"
+  tasks:
+    - name: create DNSMASQ entry on asset host
+      include_tasks: add_ansnode-tasks.yml
+      vars:
+        ansnode_ip: '{{ hostvars[item].ansible_host }}'
+        node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
+        node_type: "elasticsearch"
+      with_items: "{{ target_hosts.split(' ') }}"
+      when: '"elasticsearch" in groups and groups["elasticsearch"]'
+
+- name: add DNSMASQ entry for minio hosts
+  hosts: assethost
+  gather_facts: no
+  remote_user: ubuntu
+  vars:
+    target_hosts: "{{ groups['minio'] | join(' ') }}"
+  tasks:
+    - name: create DNSMASQ entry on asset host
+      include_tasks: add_ansnode-tasks.yml
+      vars:
+        ansnode_ip: '{{ hostvars[item].ansible_host }}'
+        node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
+        node_type: "minio"
+      with_items: "{{ target_hosts.split(' ') }}"
+      when: '"minio" in groups and groups["minio"]'
+
+- name: add DNSMASQ entry for kubernetes hosts
+  hosts: assethost
+  gather_facts: no
+  remote_user: ubuntu
+  vars:
+    target_hosts: "{{ groups['kube-kubenode'] | join(' ') }}"
+  tasks:
+    - name: create DNSMASQ entry on asset host
+      include_tasks: add_kubenode-tasks.yml
+      vars:
+        kubenode_ip: '{{ hostvars[item].ansible_host }}'
+        node_number: '{{ item | regex_replace (".*([0-9]{1})$","\1") }}'
+      with_items: "{{ target_hosts.split(' ') }}"
+      when: '"kube-kubenode" in groups and groups["kube-kubenode"]'
+
+- name: use offline content from assethost
+  hosts: admin, cassandra, elasticsearch, minio, kube-kubenode
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: disable cloud-init networking
+      raw: sudo bash -c 'echo "network{{ ":" }} {config{{ ":" }} disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg'
+    - name: steal and modify cloud-init network config
+      raw: sudo bash -c 'cat /etc/netplan/50-cloud-init.yaml | sed  "s/\(.*\)\(dhcp4{{ ":" }} true\)/\1\2\n\1nameservers{{ ":" }}\n\1  addresses{{ ":" }} [{{ groups["assethost"] | map("extract", hostvars, ["ansible_host"]) | join(",") }}]\n\1dhcp4-overrides{{ ":" }}\n\1  use-dns{{ ":" }} no/" >> /etc/netplan/offline.yaml'
+    - name: use new networking config
+      raw: '[ -f /usr/sbin/netplan ] && sudo netplan apply || /bin/true'
+    - name: move sources.list aside
+      raw: '[ ! -f /etc/apt/sources.list ] || sudo mv /etc/apt/sources.list /etc/apt/sources.list.orig'
+    - name: add assethost mirror entry
+      raw: sudo bash -c 'echo "deb [trusted=yes] https://apt.{{ fake_domain }}/apt/ bionic stable" > /etc/apt/sources.list.d/local.sources.list'
+    - name: create directory for containing the CA certificate of our assethost
+      raw: 'sudo mkdir -p /usr/local/share/ca-certificates/{{ fake_domain }}/'
+    - name: copy certificate from asset host
+      raw: "sudo curl http://{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}/{{ fake_domain }}.crt -o /usr/local/share/ca-certificates/{{ fake_domain }}/{{ fake_domain }}.crt"
+    - name: update certificate trust store
+      raw: 'sudo update-ca-certificates'
+    - name: inform apt about the new repository
+      raw: sudo apt update
+    - name: disable apt security checking
+      raw: sudo bash -c "echo 'Acquire::AllowInsecureRepositories \"true\";' > /etc/apt/apt.conf.d/99insecure"
+    - name: Golden image
+      become: yes
+      import_tasks: golden_image-tasks.yml
+    - name: create directories for fake CA certificates in docker trust store
+      become: yes
+      command: 'mkdir -p /etc/docker/certs.d/{{ item }}/'
+      with_items:
+        - 'k8s.gcr.io'
+        - 'docker.io'
+        - 'gcr.io'
+        - 'quay.io'
+        - 'registry-1.docker.io'
+    - name: place fake CA certificates in docker trust store
+      become: yes
+      command: 'bash -c "openssl s_client -showcerts -servername {{ item }} -connect {{ assethost_ip }} -port 443 2>&1 </dev/null | sed -ne \"/BEGIN CERT/,/END CERT/p\" > /etc/docker/certs.d/{{ item }}/ca.crt"'
+      vars:
+        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+      with_items:
+        - 'k8s.gcr.io'
+        - 'docker.io'
+        - 'gcr.io'
+        - 'quay.io'
+        - 'registry-1.docker.io'

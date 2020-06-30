@@ -1,0 +1,63 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Include Prompts
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: prompt for what infrastructure we're using
+      import_tasks: prompts/vpc-or-kvm.yml
+      when: wdt_infra is undefined
+    - name: prompt for what region we're deploying to
+      import_tasks: prompts/region.yml
+      when: wdt_region is undefined and wdt_infra == 'vpc'
+    - name: prompt for what environment we're deploying to
+      import_tasks: prompts/environment.yml
+      when: wdt_env is undefined
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/vpc_bastion.yml
+      when: wdt_infra == 'vpc'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/kvm_bastion.yml
+      when: bastion_eip is not defined and wdt_infra == 'kvm'
+    - name: prompt for the target IP
+      import_tasks: prompts/first_target.yml
+      vars:
+        label: the target asset host
+    - name: prompt for the fake domain name
+      import_tasks: prompts/fake_domain.yml
+      when: fake_domain is not defined
+
+- name: Prepare to serve helm2 static content
+  hosts: first_target_host
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: Setup to serve static helm2 content on remote target
+      include_role:
+        name: serve_helm2_repo
+      when: uninstall is not defined
+      vars:
+        fake_domain: '{{ dns_domain }}'
+        assethost_ip: '{{ first_target_ip }}'
+
+- name: Stop serving helm2 content
+  hosts: first_target_host
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+    - name: stop remote target from serving static helm2 content
+      include_role:
+        name: serve_helm2_repo
+        tasks_from: uninstall
+      when: uninstall is defined

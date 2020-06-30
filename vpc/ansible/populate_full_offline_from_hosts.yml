@@ -1,0 +1,46 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: populate offline content directory on bastion host
+  hosts: bastion
+  gather_facts: no
+  remote_user: ubuntu
+  tasks:
+# FIXME: add tags, so these can be run separately.
+    - name: Golden image remote target
+      become: yes
+      import_tasks: golden_image-tasks.yml
+    - name: create debian repo on remote target
+      include_tasks:
+        file: populate_debian_repo-tasks.yml
+        apply:
+          tags:
+            - update_debian
+      tags: update_debian
+    - name: create docker repo on remote target
+      include_tasks: populate_docker_repo-tasks.yml
+    - name: create poetry repo on remote target
+      include_tasks: populate_poetry_repo-tasks.yml
+    - name: create helm3 repo on remote target
+      include_tasks: populate_helm_repo-tasks.yml
+    - name: create helm2 repo on remote target
+      include_tasks: populate_helm2_repo-tasks.yml
+    - name: create github repos on remote target
+      include_tasks: populate_github_repos-tasks.yml
+    - name: create poe repo on remote target
+      include_tasks: populate_ansible_galaxy_repo-tasks.yml
+    - name: download kubernetes static content on target host
+      include_tasks: populate_kubernetes_static_content-tasks.yml
+    - name: Download Cassandra static content on remote target
+      include_tasks: populate_cassandra_static_content-tasks.yml
+    - name: Download Minio static content on remote target
+      include_tasks: populate_minio_static_content-tasks.yml

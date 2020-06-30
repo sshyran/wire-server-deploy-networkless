@@ -1,0 +1,42 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure helm2_version is set
+  set_fact: helm2_version='v2.13.1'
+  when: helm2_version is undefined
+
+- name: create offline content directory for kubernetes-charts.storage.googleapis.com
+  file:
+    path: '{{ offline_content_dir }}/static/kubernetes-charts.storage.googleapis.com'
+    state: directory
+
+- name: create offline content directory for helm binaries
+  file:
+    path: '{{ offline_content_dir }}/static/get.helm.sh/'
+    state: directory
+
+- name: download helm checksum
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm2_version }}-linux-amd64.tar.gz.sha256'
+    dest: '{{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm2_version }}-linux-amd64.tar.gz.sha256'
+
+- name: read helm checksum
+  command: bash -c 'cat {{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm2_version }}-linux-amd64.tar.gz.sha256 | sed "s/ .*//"'
+  register: helm_checksum
+
+- name: download helm binary
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm2_version }}-linux-amd64.tar.gz'
+    dest: '/{{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm2_version }}-linux-amd64.tar.gz'
+    checksum: 'sha256:{{ helm_checksum.stdout }}'
+
+- name: download the helm index
+  get_url:
+    url: 'https://kubernetes-charts.storage.googleapis.com/index.yaml'
+    dest: '{{ offline_content_dir }}/static/kubernetes-charts.storage.googleapis.com/index.yaml'

@@ -1,0 +1,27 @@
+---
+# Prompt for the environment to target.
+# optional vars:
+#  possible_envs: A list of items of possible environments, in lower case. Optional.
+# sets: wdt_env to one of the possible_envs, or fails.
+
+- name: Ensure possible_envs is set
+  set_fact:
+    possible_envs:
+      - 'offline'
+  when: possible_envs is not defined
+
+- name: Select environment
+  pause:
+    prompt: "What environment is the instance you're targeting in?"
+  register: env
+
+- name: Set fact from prompt
+  set_fact:
+    wdt_env: '{{ env.user_input | lower }}'
+  when: env is defined
+
+- name: Ensure response is one of the possibilities
+  fail: msg='cannot parse response {{ env.user_input }}'
+  when: wdt_env not in possible_envs
+
+

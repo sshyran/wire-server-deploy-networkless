@@ -1,0 +1,58 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure cassandra_version is set
+  set_fact: cassandra_version='3.11.4'
+  when: cassandra_version is undefined
+
+- name: ensure prometheus_jmx_version is set
+  set_fact: prometheus_jmx_version='0.10'
+  when: prometheus_jmx_version is undefined
+
+- name: create offline content directory for cassandra tarball
+  file:
+    path: '{{ offline_content_dir }}/static/archive.apache.org/dist/cassandra/{{ cassandra_version }}/'
+    state: directory
+
+- name: download cassandra checksum
+  get_url:
+    url: 'https://archive.apache.org/dist/cassandra/{{ cassandra_version }}/apache-cassandra-{{ cassandra_version }}-bin.tar.gz.sha256'
+    dest: '/tmp/apache-cassandra-{{ cassandra_version }}-bin.tar.gz.sha256'
+
+- name: read cassandra checksum
+  command: bash -c 'cat /tmp/apache-cassandra-{{ cassandra_version }}-bin.tar.gz.sha256 | sed "s/ .*//"'
+  register: cassandra_checksum
+
+- name: grab a copy of the cassandra install tarball
+  get_url:
+    url: 'https://archive.apache.org/dist/cassandra/{{ cassandra_version }}/apache-cassandra-{{ cassandra_version }}-bin.tar.gz'
+    dest: '{{ offline_content_dir }}/static/archive.apache.org/dist/cassandra/{{ cassandra_version }}/'
+    checksum: 'sha256:{{ cassandra_checksum.stdout }}'
+
+- name: create offline content directory for jmx exporter
+  file:
+    path: '{{ offline_content_dir }}/static/repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/{{ prometheus_jmx_version }}/'
+    state: directory
+
+- name: download jmx exporter checksum
+  get_url:
+    url: 'https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/{{ prometheus_jmx_version }}/jmx_prometheus_javaagent-{{ prometheus_jmx_version }}.jar.sha1'
+    dest: '/tmp/jmx_prometheus_javaagent-{{ prometheus_jmx_version }}.jar.sha1'
+
+- name: read jmx exporter checksum
+  command: bash -c 'cat /tmp/jmx_prometheus_javaagent-{{ prometheus_jmx_version }}.jar.sha1'
+  register: jmx_exporter_checksum
+
+- name: grab a copy of the jmx exporter jar
+  get_url:
+    url: 'https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/{{ prometheus_jmx_version }}/jmx_prometheus_javaagent-{{ prometheus_jmx_version }}.jar'
+    dest: '{{ offline_content_dir }}/static/repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/{{ prometheus_jmx_version }}/jmx_prometheus_javaagent-{{ prometheus_jmx_version }}.jar'
+    checksum: 'sha1:{{ jmx_exporter_checksum.stdout }}'
+
+

@@ -1,0 +1,71 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: create offline content directory for minio
+  file:
+    path: '{{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/'
+    state: directory
+
+- name: create offline content directory for the minio client
+  file:
+    path: '{{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/'
+    state: directory
+
+- name: download minio checksum
+  get_url:
+    url: 'https://dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum'
+    dest: '{{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum'
+    force: yes
+
+- name: download minio client checksum
+  get_url:
+    url: 'https://dl.minio.io/client/mc/release/linux-amd64/mc.sha256sum'
+    dest: '{{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/mc.sha256sum'
+    force: yes
+
+- name: read minio checksum
+  command: bash -c 'cat {{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum | sed "s/ .*//"'
+  register: minio_checksum
+
+- name: read minio client checksum
+  command: bash -c 'cat {{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/mc.sha256sum | sed "s/ .*//"'
+  register: minio_client_checksum
+
+- name: read current minio version
+  command: bash -c 'cat {{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/minio.sha256sum | sed "s/.* //"'
+  register: minio_release
+
+- name: read current minio client version
+  command: bash -c 'cat {{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/mc.sha256sum | sed "s/.* //"'
+  register: minio_client_release
+
+- name: grab a copy of minio (no version name attached)
+  get_url:
+    url: 'https://dl.minio.io/server/minio/release/linux-amd64/{{ minio_release.stdout }}'
+    dest: '{{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/minio'
+    checksum: 'sha256:{{ minio_checksum.stdout }}'
+
+- name: grab a copy of minio (full version name attached)
+  get_url:
+    url: 'https://dl.minio.io/server/minio/release/linux-amd64/{{ minio_release.stdout }}'
+    dest: '{{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64/'
+    checksum: 'sha256:{{ minio_checksum.stdout }}'
+
+- name: grab a copy of the minio client (no version name attached)
+  get_url:
+    url: 'https://dl.minio.io/client/mc/release/linux-amd64/{{ minio_client_release.stdout }}'
+    dest: '{{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/mc'
+    checksum: 'sha256:{{ minio_client_checksum.stdout }}'
+
+- name: grab a copy of the minio client (full version name attached)
+  get_url:
+    url: 'https://dl.minio.io/client/mc/release/linux-amd64/{{ minio_client_release.stdout }}'
+    dest: '{{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64/'
+    checksum: 'sha256:{{ minio_client_checksum.stdout }}'
+

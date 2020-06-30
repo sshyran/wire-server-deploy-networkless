@@ -1,0 +1,66 @@
+- name: Check dependencies
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Verify Ansible version meets this playbook's requirements
+      include: tasks/version_check.yml
+      vars:
+        ansible_min_version: 2.7.0
+        ansible_max_version: 2.8.0
+      tags: always
+
+- name: Include Prompts
+  hosts: localhost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: prompt for what infrastructure we're using
+      import_tasks: prompts/vpc-or-kvm.yml
+      when: wdt_infra is undefined
+    - name: prompt for what region we're deploying to
+      import_tasks: prompts/region.yml
+      when: wdt_region is undefined and wdt_infra == 'vpc'
+    - name: prompt for what environment we're deploying to
+      import_tasks: prompts/environment.yml
+      when: wdt_env is undefined
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/vpc_bastion.yml
+      vars:
+        agent: true
+      when: wdt_infra == 'vpc'
+    - name: prompt for the bastion host, if needed
+      import_tasks: prompts/kvm_bastion.yml
+      vars:
+        agent: true
+      when: bastion_eip is not defined and wdt_infra == 'kvm'
+    - name: prompt for the target IP.
+      import_tasks: prompts/first_target.yml
+      vars:
+        label: the target asset host
+
+- name: Ensure offline content directory exists
+  hosts: first_target_host
+  gather_facts: no
+  become: no
+  tasks:
+    - name: ensure offline_content_dir is set
+      set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+      when: offline_content_dir is undefined
+    - raw: 'mkdir -p {{ offline_content_dir }}'
+
+- name: Copy offline content
+  hosts: bastion_host
+  gather_facts: no
+  become: no
+  remote_user: ubuntu
+  tasks:
+    - name: ensure offline_content_dir is set
+      set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+      when: offline_content_dir is undefined
+    - name: reset our SSH connection
+      meta: reset_connection
+    - name: rsync offline content to asset host
+      command: |
+       bash -c 'rsync -e "ssh -A -o StrictHostKeyChecking=no" -avrSPX {{ offline_content_dir }}/* ubuntu@{{ first_target_ip }}:{{ offline_content_dir }}'
+

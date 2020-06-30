@@ -1,0 +1,16 @@
+---
+- name: ensure label is set
+  set_fact: label=''
+  when: label is undefined
+
+- name: Select target
+  pause:
+    prompt: 'the index of the {{ label }}?'
+  register: node_index
+  when: node_number is not defined
+
+- name: set fact from prompt
+  set_fact:
+    node_number: '{{ node_index.user_input }}'
+  when: node_number is not defined
+

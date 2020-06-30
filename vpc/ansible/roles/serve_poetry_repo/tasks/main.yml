@@ -1,0 +1,229 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: ensure assethost_ip is given.
+  fail:
+    msg: 'assethost_ip must be set'
+  when: assethost_ip is undefined
+
+- name: ensure fake_domain is given.
+  fail:
+    msg: 'fake_domain must be set'
+  when: fake_domain is undefined
+
+- name: change permissions on static content, for serving via http/https
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+  become: yes
+
+- name: 'create certificate for {{ item }} (1 of 3)'
+  command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: 'create certificate for {{ item }} (2 of 3)'
+  command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN={{ item }}"'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: 'create certificate for {{ item }} (3 of 3)'
+  command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem -days 500 -sha256'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: create apache configuration
+  copy:
+    dest: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    remote_src: yes
+    src: '/etc/apache2/sites-available/default-ssl.conf'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: modify apache configuration to refer to proper ssl certs (1 of 2)
+  replace:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    regexp: 'SSLCertificateFile.*'
+    replace: 'SSLCertificateFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: modify apache configuration to refer to proper ssl certs (2 of 2)
+  replace:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    regexp: 'SSLCertificateKeyFile.*'
+    replace: 'SSLCertificateKeyFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: modify apache configuration to serve the poetry repository (1 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    block: |
+      ServerName {{ item }}
+      HostnameLookups Off
+    insertbefore: </VirtualHost>
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: get a list of subdirectories of github to serve.
+  find:
+    paths: '{{ offline_content_dir }}/static/github.com/'
+    file_type: directory
+    patterns: "*"
+  register: github_targets
+
+- name: modify apache configuration to serve the poetry repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'github.com'
+  with_items: '{{ github_targets.files }}'
+
+- name: get a list of subdirectories of raw.githubusercontent.com to serve.
+  find:
+    paths: '{{ offline_content_dir }}/static/raw.githubusercontent.com/'
+    file_type: directory
+    patterns: "*"
+  register: githubusercontent_targets
+
+- name: modify apache configuration to serve the poetry repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'raw.githubusercontent.com'
+  with_items: '{{ githubusercontent_targets.files }}'
+
+- name: get a list of subdirectories of pypi.org to serve
+  find:
+    paths: '{{ offline_content_dir }}/static/pypi.org/'
+    file_type: directory
+    patterns: "*"
+  register: pypi_targets
+
+- name: get a list of more subdirectories of pypi.org to serve
+  find:
+    paths: '{{ offline_content_dir }}/poetry-repo/'
+    file_type: directory
+    patterns: "*"
+  register: poetry_repo_targets
+
+- name: modify apache configuration to serve the pypi repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'pypi.org'
+  with_items:
+    - '{{ pypi_targets.files }}'
+    - '{{ poetry_repo_targets.files }}'
+
+- name: modify apache configuration to serve the pypi repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'pypi.python.org'
+  with_items:
+    - '{{ pypi_targets.files }}'
+    - '{{ poetry_repo_targets.files }}'
+
+- name: 'enable apache configuration for {{ item }}'
+  file:
+    src: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    dest: '/etc/apache2/sites-enabled/000-{{ item }}.conf'
+    state: link
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+  become: yes
+
+- name: restart apache
+  systemd:
+    name: apache2
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: add DNS entry for {{ item }}
+  copy:
+    content: 'address=/{{ item }}/{{ assethost_ip }}'
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ item }}'
+  with_items:
+    - 'raw.githubusercontent.com'
+    - 'github.com'
+    - 'pypi.org'
+    - 'pypi.python.org'
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes

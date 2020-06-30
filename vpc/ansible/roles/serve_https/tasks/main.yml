@@ -1,0 +1,81 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: Install apache
+  apt:
+    name: apache2
+  become: yes
+
+- name: create directory for apache configurations
+  file:
+    path: '{{ offline_delivery_dir }}/apache/sites'
+    state: directory
+
+- name: create directory for HTTPS certificates
+  file:
+    path: '{{ offline_delivery_dir }}/apache/certs'
+    state: directory
+
+- name: create CA directory
+  file:
+    path: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}'
+    state: directory
+
+- name: create openssl.cnf
+  copy:
+    src: fake_CA/openssl-fake_domain.cnf
+    dest: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/openssl.cnf'
+    
+- name: modify openssl.cnf for '{{ fake_domain }}'
+  replace:
+    path: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/openssl.cnf'
+    regexp: 'fake_domain'
+    replace: '{{ fake_domain }}'
+
+- name: create CA creation helper script
+  copy:
+    src: fake_CA/mk-certs
+    dest: '{{ offline_delivery_dir }}/ca/mk-certs'
+    mode: '0755'
+
+- name: create fake CA certificate authority
+  command: '{{ offline_delivery_dir }}/ca/mk-certs'
+  args:
+    chdir: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}'
+
+- name: create directory for private keys
+  file:
+    path: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/private'
+    state: directory
+
+- name: ensure apache is happy with its configuration
+  command: apachectl configtest
+  become: yes
+
+- name: prepare apache to serve SSL content
+  command: a2enmod ssl
+  become: yes
+
+- name: disable apache default SSL site
+  command: a2dissite default-ssl
+  become: yes
+
+- name: restart apache
+  systemd:
+    name: apache2
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: copy CA certificate
+  copy:
+    src: '{{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt'
+    dest: '/var/www/html/{{ fake_domain }}.crt'
+    remote_src: yes
+  become: yes

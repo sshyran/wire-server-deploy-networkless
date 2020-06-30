@@ -1,0 +1,17 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: change permissions on static content, so it can be updated
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+    recurse: yes
+    owner: ubuntu
+    group: ubuntu
+  become: yes

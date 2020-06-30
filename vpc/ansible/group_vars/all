@@ -1,0 +1,2 @@
+# the type of deployment tool being used.
+wdt_type: "{{ 'khan' if (khan_env is defined) else 'ansible' }}"

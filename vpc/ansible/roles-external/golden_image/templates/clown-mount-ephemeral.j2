@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# Ensure that the ephemeral storage is present in /etc/fstab and mounted,
+# or absent if there is no ephemeral storage on this instance.
+
+set -ex
+
+VOL_LABEL=${VOL_LABEL:-vol0}
+MOUNT_POINT=${MOUNT_POINT:-/mnt}
+
+# No ephemeral store, ensure there is no mount in fstab and exit
+[ ! -e /dev/xvdb ] && {
+    sed -i -n "/LABEL=${VOL_LABEL}/!p" /etc/fstab
+    exit 0
+}
+
+# Maybe set up mdadm
+[[ $(findfs LABEL=${VOL_LABEL}) == /dev/md0 ]] && [ ! -e /etc/mdadm/mdadm.conf.orig ] && {
+    mv /etc/mdadm/mdadm.conf /etc/mdadm/mdadm.conf.orig
+    cat >/etc/mdadm/mdadm.conf <<EOF
+CREATE owner=root group=disk mode=0660 auto=yes
+HOMEHOST <ignore>
+MAILADDR root
+DEVICE $(echo /dev/xvd[bcde])
+EOF
+    mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+    # Make sure our ramdisk contains the new mdadm.conf
+    update-initramfs -u
+}
+
+# Maybe set up the mount point and mount it
+MOUNT_OPTIONS='{{ golden_image_mount_options }}'
+grep -q ^LABEL=${VOL_LABEL} /etc/fstab || {
+    echo "LABEL=${VOL_LABEL} $MOUNT_POINT xfs $MOUNT_OPTIONS 0 0" >> /etc/fstab
+    mount LABEL=${VOL_LABEL}
+}

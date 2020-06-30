@@ -1,0 +1,108 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure helm3_version is set
+  set_fact: helm3_version='v3.1.1'
+  when: helm3_version is undefined
+
+- name: determine what architecture the target server is running on in helm style.
+  command: bash -c 'uname -m | sed -e "s/i[3-6]86/i386/" -e "s/x86_/amd/" -e "s/aarch/arm/"'
+  register: helm_architecture
+
+- name: download helm checksum
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum'
+    dest: '/tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum'
+
+- name: read helm checksum
+  command: bash -c 'cat /tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz.sha256sum | sed "s/ .*//"'
+  register: helm_checksum
+
+- name: download helm binary
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz'
+    dest: '/tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz'
+    checksum: 'sha256:{{ helm_checksum.stdout }}'
+
+- name: extract helm binary
+  unarchive:
+    src: '/tmp/helm-{{ helm3_version }}-linux-{{ helm_architecture.stdout }}.tar.gz'
+    dest: /usr/local/bin
+    extra_opts:
+    - --strip=1
+    - --wildcards
+    - '*/helm'
+    remote_src: True
+    creates: /usr/local/bin/helm
+  become: yes
+
+- name: create offline content directory for static content
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+
+- name: create offline content directory for helm binaries
+  file:
+    path: '{{ offline_content_dir }}/static/get.helm.sh/'
+    state: directory
+
+- name: download helm checksum
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz.sha256sum'
+    dest: '{{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz.sha256sum'
+
+- name: read helm checksum
+  command: bash -c 'cat {{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz.sha256sum | sed "s/ .*//"'
+  register: helm_checksum
+
+- name: download helm binary
+  get_url:
+    url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz'
+    dest: '/{{ offline_content_dir }}/static/get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz'
+    checksum: 'sha256:{{ helm_checksum.stdout }}'
+
+
+- name: create offline content directory for helm charts
+  file:
+    path: '{{ offline_content_dir }}/helm_repository/charts'
+    state: directory
+
+- name: create cache directory for helm charts
+  file:
+    path: '{{ offline_config_dir }}/helm_repository/{{ item }}'
+    state: directory
+  with_items:
+    - cache
+    - config
+    - data
+
+- name: add our helm repo to our helm environment
+  command: helm repo add wire-release https://s3-eu-west-1.amazonaws.com/public.wire.com/charts
+  environment:
+    XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
+    XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
+    XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
+
+- name: update the helm indexes
+  command: helm repo update
+  environment:
+    XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
+    XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
+    XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
+
+- name: include our list of helm charts to mirror
+  include_vars: 'group_vars/helm_charts.yml'
+
+- name: pull all of the helm charts
+  command: bash -e -c "if [ -e {{ offline_content_dir }}/helm_repository/charts/{{ item.value.name | regex_replace('.*/','') }} ]; then echo Refusing to re-pull helm chart {{ item.value.name }} - chart already pulled. ; else helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts {{ item.value.name }} ; fi; "
+  environment:
+    XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
+    XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
+    XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
+  with_dict: '{{ helm_charts }}'  

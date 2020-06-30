@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# Partition/stripe and format disks, if any exists.
+
+set -ex
+
+VOL_LABEL=${VOL_LABEL:-vol0}
+
+findfs LABEL=${VOL_LABEL} || {
+    instance_disks=(/dev/xvd[bcde])
+    ndisks=${#instance_disks[@]}
+
+    if [[ ! -e /dev/xvdb ]]; then
+        echo "No ephemeral storage found" 1>&2
+        exit 0
+    elif [[ $ndisks -eq 1 && -e /dev/xvdb ]]; then
+        EPH_DEV=/dev/xvdb1
+        parted -sa optimal /dev/xvdb mklabel gpt
+        parted -sa optimal /dev/xvdb mkpart primary xfs 0% 100%
+    elif [[ $ndisks -ge 2 ]]; then
+        EPH_DEV=/dev/md0
+        yes | mdadm --create ${EPH_DEV} \
+                    --level=0 \
+                    --chunk=256 \
+                    --raid-devices=${ndisks} \
+                    ${instance_disks[*]}
+    fi
+
+    blockdev --setra 65536 $EPH_DEV
+    mkfs.xfs -L $VOL_LABEL -f $EPH_DEV
+}

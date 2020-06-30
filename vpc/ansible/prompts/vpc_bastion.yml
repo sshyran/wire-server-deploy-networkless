@@ -1,0 +1,28 @@
+---
+
+# FIXME: use ec2_instance_facts to detect the bastion host for an environment in a VPC.
+
+- name: Select bastion host
+  pause:
+    prompt: "what is the IP of the bastion host to use (if applicable)?"
+  register: bastion
+  when: bastion_eip is not defined
+
+- name: set fact from prompt
+  set_fact:
+    bastion_eip: '{{ bastion.user_input }}'
+  when: bastion_eip is not defined
+
+- name: add bastion host to group with agent forwarding
+  add_host:
+    name: '{{ bastion_eip }}'
+    groups: bastion_host
+    ansible_ssh_common_args: '-A -o StrictHostKeyChecking=no'
+  when: agent is defined
+
+- name: add bastion host to group without agent forwarding
+  add_host:
+    name: '{{ bastion_eip }}'
+    groups: bastion_host
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+  when: agent is not defined

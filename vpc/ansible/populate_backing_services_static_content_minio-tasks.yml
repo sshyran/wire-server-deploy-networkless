@@ -1,0 +1,55 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: default minio server release version to 'latest' if not set
+  set_fact:
+    minio_server_release: ''    # empty string --> latest
+  when: minio_server_release is undefined
+
+- name: default minio client release version to 'latest' if not set
+  set_fact:
+    minio_client_release: ''    # empty string --> latest
+  when: minio_client_release is undefined
+
+- name: set minio server destination directory
+  set_fact:
+    minio_server_dest_dir: "{{ offline_content_dir }}/static/dl.minio.io/server/minio/release/linux-amd64{{ '/archive' if minio_server_release | length > 0 }}"
+
+- name: set minio client destination directory
+  set_fact:
+    minio_client_dest_dir: "{{ offline_content_dir }}/static/dl.minio.io/client/mc/release/linux-amd64{{ '/archive' if minio_client_release | length > 0 }}"
+
+
+- name: create offline content directory for minio server component
+  file:
+    path: "{{ minio_server_dest_dir }}"
+    state: directory
+
+- name: download minio server
+  import_role:
+    name: ansible-minio
+    tasks_from: install-server
+  vars:
+    minio_server_bin: "{{ minio_server_dest_dir }}/minio{{ '.' + minio_server_release if minio_server_release | length > 0 }}"
+  tags:
+    - always
+
+- name: create offline content directory for minio client component
+  file:
+    path: "{{ minio_client_dest_dir }}"
+    state: directory
+
+- name: download minio client
+  import_role:
+    name: ansible-minio
+    tasks_from: install-client
+  vars:
+    minio_client_bin: "{{ minio_client_dest_dir }}/mc{{ '.' + minio_server_release if minio_client_release | length > 0 }}"
+  tags:
+    - always

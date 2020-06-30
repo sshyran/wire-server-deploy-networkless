@@ -1,0 +1,45 @@
+---
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: ensure fake_domain is given.
+  fail:
+    msg: 'fake_domain must be set'
+  when: fake_domain is undefined
+
+- name: ensure ansnode_ip is given.
+  fail:
+    msg: 'ansnode_ip must be set'
+  when: ansnode_ip is undefined
+
+- name: ensure node_number is given.
+  fail:
+    msg: 'node_number must be set'
+  when: node_number is undefined
+
+- name: ensure node_type is given.
+  fail:
+    msg: 'node_type must be set'
+  when: node_type is undefined
+
+- name: ensure dnsmasq directory exists
+  file:
+    path: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/'
+    state: directory
+  become: yes
+
+- name: add DNS entry for {{ node_type }}{{ node_number }}
+  copy:
+    content: |
+      address=/ip-{{ ansnode_ip | replace('.','-')}}.{{ fake_domain }}/{{ ansnode_ip }}
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ node_type }}{{ node_number }}'
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+

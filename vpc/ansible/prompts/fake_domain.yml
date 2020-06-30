@@ -1,0 +1,11 @@
+---
+- name: Select fake domain name
+  pause:
+    prompt: "What domain would you like your fake CA to use?"
+  register: fake_domainname
+  when: fake_domain is not defined
+
+- name: set fact from prompt
+  set_fact:
+    fake_domain: '{{ fake_domainname.user_input | lower }}'
+  when: fake_domain is not defined

@@ -1,0 +1,141 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: ensure offline_delivery_dir is set
+  set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+  when: offline_delivery_dir is undefined
+
+- name: ensure assethost_ip is given.
+  fail:
+    msg: 'assethost_ip must be set'
+  when: assethost_ip is undefined
+
+- name: ensure fake_domain is given.
+  fail:
+    msg: 'fake_domain must be set'
+  when: fake_domain is undefined
+
+- name: change permissions on static content, for serving via http/https
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+  become: yes
+
+- name: 'create certificate for {{ item }} (1 of 3)'
+  command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: 'create certificate for {{ item }} (2 of 3)'
+  command: 'openssl req -new -key {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -subj "/C=DE/ST=Berlin/L=Berlin/O=Wire/OU=Backend Team/CN={{ item }}"'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: 'create certificate for {{ item }} (3 of 3)'
+  command: 'openssl x509 -req -in {{ offline_delivery_dir }}/ca/{{ fake_domain }}/{{ item }}.csr -CA {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ fake_domain }}.crt -CAkey {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/private.pem -CAcreateserial -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem -days 500 -sha256'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: create apache configuration
+  copy:
+    dest: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    remote_src: yes
+    src: '/etc/apache2/sites-available/default-ssl.conf'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: modify apache configuration to refer to proper ssl certs (1 of 2)
+  replace:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    regexp: 'SSLCertificateFile.*'
+    replace: 'SSLCertificateFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/certs/{{ item }}.pem'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: modify apache configuration to refer to proper ssl certs (2 of 2)
+  replace:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    regexp: 'SSLCertificateKeyFile.*'
+    replace: 'SSLCertificateKeyFile {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: modify apache configuration to serve the ansible galaxy repository (1 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    block: |
+      ServerName {{ item }}
+      HostnameLookups Off
+      RewriteEngine On
+      RewriteCond "%{QUERY_STRING}" ^(page.*)$
+      RewriteRule ^/api/v1/roles/5920/versions/$ /api/v1/roles/5920/versions/%1? [NC,L]
+      DocumentRoot {{ offline_content_dir }}static/{{ item }}/
+    insertbefore: </VirtualHost>
+  vars:
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: get a list of subdirectories of galaxy.ansible.com to serve.
+  find:
+    paths: '{{ offline_content_dir }}/static/galaxy.ansible.com/'
+    file_type: directory
+    patterns: "*"
+  register: galaxy_targets
+
+- name: modify apache configuration to serve the ansible galaxy repository (2 of 2)
+  blockinfile:
+    path: '{{ offline_delivery_dir }}/apache/sites/000-{{ domain }}.conf'
+    block: |
+      alias /{{ item.path | basename }} {{ item.path }}
+      <Directory {{ item.path }}>
+      Options Indexes FollowSymLinks MultiViews
+      Require all granted
+      </Directory>
+    insertbefore: </VirtualHost>
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.path }}"
+  vars:
+    domain: 'galaxy.ansible.com'
+  with_items: '{{ galaxy_targets.files }}'
+
+- name: 'enable apache configuration for {{ item }}'
+  file:
+    src: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
+    dest: '/etc/apache2/sites-enabled/000-{{ item }}.conf'
+    state: link
+  with_items:
+    - 'galaxy.ansible.com'
+  become: yes
+
+- name: enable apache rewriting
+  command: a2enmod rewrite
+  become: yes
+
+- name: restart apache
+  systemd:
+    name: apache2
+    state: restarted
+    daemon_reload: yes
+  become: yes
+
+- name: add DNS entry for {{ item }}
+  copy:
+    content: 'address=/{{ item }}/{{ assethost_ip }}'
+    dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ item }}'
+  with_items:
+    - 'galaxy.ansible.com'
+
+- name: restart DNSMASQ
+  systemd:
+    name: dnsmasq
+    state: restarted
+    daemon_reload: yes
+  become: yes

@@ -1,0 +1,12 @@
+[Unit]
+Description=Init ephemeral disk
+Wants=cloud-init.service
+After=cloud-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/clown-init-ephemeral
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

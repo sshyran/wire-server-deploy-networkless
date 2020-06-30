@@ -1,0 +1,26 @@
+---
+# Prompt for the AWS region.
+# optional vars:
+#  possible_regions: A list of items of possible regions, in lower case.
+# sets: wdt_region to one of the possible_regions, or fails.
+
+- name: Ensure possible_regions is set
+  set_fact:
+    possible_regions:
+      - 'eu-central-1'
+  when: possible_regions is not defined
+
+- name: Select AWS Region
+  pause:
+    prompt: "What region is the instance you're targeting in?"
+  register: aws_region
+
+- name: set fact from prompt
+  set_fact:
+    wdt_region: '{{ aws_region.user_input | lower }}'
+
+# only one region, for now.
+- name: ensure response makes sense
+  fail: msg='cannot parse response {{ aws_region.user_input }}'
+  when: wdt_region not in possible_regions
+

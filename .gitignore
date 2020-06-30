@@ -1,2 +1,6 @@
 tmp/
 work_dir/
+# emacs backups
+*~
+# ansible failures
+*.retry

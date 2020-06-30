@@ -1,0 +1,66 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: create offline content directory for static web content
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+
+- name: create offline content directory for galaxy.ansible.com
+  file:
+    path: '{{ offline_content_dir }}/static/galaxy.ansible.com'
+    state: directory
+
+- name: create offline content directory for a fake ansible galaxy api endpoint
+  file:
+    path: '{{ offline_content_dir }}/static/galaxy.ansible.com/api/'
+    state: directory
+
+- name: create offline content directory for fake ansible galaxy roles
+  file:
+    path: '{{ offline_content_dir }}/static/galaxy.ansible.com/api/v1/roles/5920/versions/'
+    state: directory
+
+- name: populate our fake galaxy api endpoint
+  command: bash -e -c 'echo "{\"description\":\"GALAXY REST API\",\"current_version\":\"v1\",\"available_versions\":{\"v1\":\"/api/v1/\",\"v2\":\"/api/v2/\"},\"server_version\":\"3.3.0\",\"version_name\":\"Doin'\'' it Right\",\"team_members\":[\"chouseknecht\",\"cutwater\",\"alikins\",\"newswangerd\",\"awcrosby\",\"tima\",\"gregdek\"]}" > {{ offline_content_dir }}/static/galaxy.ansible.com/api/index.html'
+  
+- name: populate the roles endpoint for finding unarchive-deps.
+  get_url:
+    url: 'https://galaxy.ansible.com/api/v1/roles/?name=unarchive-deps'
+    dest: '{{ offline_content_dir }}/static/galaxy.ansible.com/api/v1/roles/index.html'
+
+- name: populate the roles endpoint for finding the version of unarchive-deps.
+  get_url:
+    url: 'https://galaxy.ansible.com/api/v1/roles/5920/versions?page_size=50'
+    dest: '{{ offline_content_dir }}/static/galaxy.ansible.com/api/v1/roles/5920/versions/page_size=50'
+    force: yes
+
+- name: populate the roles endpoint for finding the version of unarchive-deps.
+  get_url:
+    url: 'https://galaxy.ansible.com/api/v1/roles/5920/versions?page=2'
+    dest: '{{ offline_content_dir }}/static/galaxy.ansible.com/api/v1/roles/5920/versions/page=2'
+    force: yes
+
+- name: create offline content directory for static github content
+  file:
+    path: '{{ offline_content_dir }}/static/github.com/'
+    state: directory
+
+- name: create offline content directory for ansible-unarchive-deps
+  file:
+    path: '{{ offline_content_dir }}/static/github.com/andrewrothstein/ansible-unarchive-deps/archive'
+    state: directory
+
+- name: download unarchive-deps
+  get_url:
+    url: 'https://github.com/andrewrothstein/ansible-unarchive-deps/archive/{{ item }}.tar.gz'
+    dest: '{{ offline_content_dir }}/static/github.com/andrewrothstein/ansible-unarchive-deps/archive/{{ item }}.tar.gz'
+  with_items:
+   - 'v1.0.12'
+   - 'v1.1.2'

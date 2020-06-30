@@ -1,0 +1,19 @@
+---
+# The hostname the clients use to contact the primary VPN server.
+vpn_primary_name: vpn1
+vpn_routing:
+  # The DNS name of the primary VPN server.
+  primary: openvpn1.offline.zinfra.io
+  dhcp:
+    server:
+      # Primary VPN subnet of the server.
+      # tun0 will be bound to 192.168.240.1
+      - '192.168.240.0 255.255.255.0'
+    route:
+      # Routing for secondary VPN subnets. Packets with such destination addresses
+      # need to be routed back into the VPN tunnel (tun0 / 192.168.240.1).
+      - '192.168.241.0 255.255.255.0'
+    push:
+      # Tell clients to route packets destined for the EC2 network
+      # into the VPN tunnel.
+      - 'route 172.17.0.0 255.255.240.0'

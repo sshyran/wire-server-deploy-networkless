@@ -1,0 +1,154 @@
+---
+- name: ensure offline_content_dir is set
+  set_fact: offline_content_dir='/home/ubuntu/offline_content/'
+  when: offline_content_dir is undefined
+
+- name: ensure offline_config_dir is set
+  set_fact: offline_config_dir='/home/ubuntu/offline_config/'
+  when: offline_config_dir is undefined
+
+- name: create offline content directory for static web content
+  file:
+    path: '{{ offline_content_dir }}/static'
+    state: directory
+
+- name: create offline content directory for raw.githubusercontent.com
+  file:
+    path: '{{ offline_content_dir }}/static/raw.githubusercontent.com'
+    state: directory
+
+- name: create offline content directory for get-poetry.py
+  file:
+    path: '{{ offline_content_dir }}/static/raw.githubusercontent.com/sdispater/poetry/master/'
+    state: directory
+
+- name: download get-poetry.py
+  get_url:
+    url: https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py
+    dest: '{{ offline_content_dir }}/static/raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py'
+
+- name: create offline content directory for pypi.org
+  file:
+    path: '{{ offline_content_dir }}/static/pypi.org'
+    state: directory
+
+- name: create offline content directory for the poetry index
+  file:
+    path: '{{ offline_content_dir }}/static/pypi.org/pypi/poetry/'
+    state: directory
+
+- name: grab the poetry repo json file
+  get_url:
+    url: https://pypi.org/pypi/poetry/json
+    dest: '{{ offline_content_dir }}/static/pypi.org/pypi/poetry/json'
+
+- name: install jq
+  apt:
+    name: jq
+  become: yes
+
+- name: detect poetry version
+  command: 'bash -c "cat {{ offline_content_dir }}/static/pypi.org/pypi/poetry/json | jq .info.version | tr -d \\\""'
+  register: poetry_version
+
+- name: detect poetry version sha256
+  command: 'bash -c "cat {{ offline_content_dir }}/static/pypi.org/pypi/poetry/json | jq .releases.\\\"0.12.17\\\"[1].digests.sha256 | tr -d \\\""'
+  register: poetry_sha256
+
+- name: create offline content directory for github.com
+  file:
+    path: '{{ offline_content_dir }}/static/github.com'
+    state: directory
+
+- name: creating static offline content directory for poetry release
+  file:
+    path: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/'
+    state: directory
+
+- name: grab the poetry binary sha256sum
+  get_url:
+    url: 'https://github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.sha256sum'
+    dest: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.sha256sum'
+
+- name: detect poetry binary sha256sum
+  command: 'cat {{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.sha256sum'
+  register: poetry_binary_sha256
+
+- name: download poetry
+  get_url:
+    url: 'https://github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.tar.gz'
+    dest: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.tar.gz'
+    checksum: 'sha256:{{ poetry_binary_sha256.stdout }}'
+
+- name: make a directory for poetry locks
+  file:
+    path: '{{ offline_config_dir }}/poetry-repo/locks'
+    state: directory
+
+- name: download the latest wire-server-deploy poetry lock
+  get_url:
+    url: 'https://raw.githubusercontent.com/wireapp/wire-server-deploy/master/ansible/poetry.lock'
+    dest: '{{ offline_config_dir }}/poetry-repo/locks/wire-server-deploy.lock'
+
+- name: determine target python package names
+  command: bash -c 'cat {{ offline_config_dir }}/poetry-repo/locks/*.lock | grep -E "^name" | sed "s/name = //" | tr -d "\""'
+  register: package_targets
+
+- name: determine target safe python package names
+  command: bash -c 'cat {{ offline_config_dir }}/poetry-repo/locks/*.lock | grep -E "^name" | sed "s/name = //" | tr -d "\"" | tr "." "-"'
+  register: package_safe_targets
+
+- name: create directories for package indexes
+  file:
+    path: '{{ offline_config_dir }}/poetry-repo/{{ item }}'
+    state: directory
+  loop: '{{ package_targets.stdout_lines }}'
+
+- name: create directories for packages in python repository
+  file:
+    path: '{{ offline_content_dir }}/poetry-repo/repo'
+    state: directory
+
+- name: create directories for packages in python repository
+  file:
+    path: '{{ offline_content_dir }}/poetry-repo/simple'
+    state: directory
+
+- name: create directories for packages in python repository
+  file:
+    path: '{{ offline_content_dir }}/poetry-repo/simple/{{ item }}'
+    state: directory
+  loop: '{{ package_safe_targets.stdout_lines }}'
+
+- name: get the upstream contents for each package.
+  get_url:
+    url: 'https://pypi.org/simple/{{ item }}/'
+    dest: '{{ offline_config_dir }}/poetry-repo/{{ item }}/index.orig'
+  loop: '{{ package_targets.stdout_lines }}'
+
+- name: Determine target python package sha256s
+  command: bash -c 'cat {{ offline_config_dir }}/poetry-repo/locks/*.lock | tr -d "\"" | sed -n "s/{{ item }} = [[]/{{ item }}:\n[/p" | sed "s/[[]/  - /" | sed "s/,/\n  -/g" | tr -d "]"'
+  register: packages_with_sha256s
+  loop: '{{ package_targets.stdout_lines }}'
+
+- name: Determine target python package URLs
+  command: bash -c 'echo "{{ item.stdout }}" | sed -n "s/:/=/p"; for each in $(echo "{{ item.stdout }}" | sed -n "s/  - //p"); do { echo -n "  - " ; grep $each {{ offline_config_dir }}/poetry-repo/$(echo "{{ item.stdout }}" | sed -n "s/://p")/index.orig | sed "s/#.*//" | sed "s/.*\"//"; } done;'
+  register: packages_files
+  loop: '{{ packages_with_sha256s.results }}'
+
+- name: mirror python packages
+  command: bash -e -c "for each in $( echo $'{{ item.stdout }}' | sed -n 's/  - //p'); do { curl $each -o {{ offline_content_dir }}/poetry-repo/repo/$(echo $each| sed 's=.*/=='); } done;"
+  loop: '{{ packages_files.results }}'
+
+- name: create initial html snippets
+  command: bash -c "echo $'<html>\n    <head>' > {{ offline_content_dir }}/poetry-repo/simple/{{ item }}/index.html"
+  loop: '{{ package_safe_targets.stdout_lines }}'
+
+- name: generate URLs for all files
+  command: bash -e -c 'for each in $(echo "{{ item.stdout }}" | sed -n "s/  - //p"); do { for href in $(grep $each {{ offline_config_dir }}/poetry-repo/$(echo "{{ item.stdout }}" | sed -n "s/://p")/index.orig | sed "s/.*href=.//" | sed "s/\".*//") ; do { echo "    <a href=\"https://pypi.org/repo/"$(echo $href | sed "s=.*/==")"\">"$(echo $href | sed "s=.*/==" | sed "s=.sha.*==")"<\a>" >> {{ offline_content_dir }}/poetry-repo/simple/$(echo "{{ item.stdout }}" | sed -n "s/://p" | tr "." "-" )/index.html; } ; done ; } done;'
+  loop: '{{ packages_with_sha256s.results }}'
+
+- name: add finishing html snippets
+  command: bash -c "echo $'    <\head>\n<\html>' >> {{ offline_content_dir }}/poetry-repo/simple/{{ item }}/index.html"
+  loop: '{{ package_safe_targets.stdout_lines }}'
+
