@@ -3,7 +3,7 @@ SHELL = bash -eo pipefail
 MKFILE_DIR = $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # NOTE: overriding OS-wide environment variables instead of the `HELM_` prefixed ones. Apparently, they don't properly
-# work yet. Though, right now it also looks like that the documented HELM_* vars won't cover every asset (e.g. cached
+# work yet. Though, right now it also looks like that the documented HELM_* vars won't cover every aspect (e.g. cached
 # plugins, which is still be stored under ${XDG_CACHE_HOME}/helm/plugins and symlinked into ${HELM_PLUGINS}).
 #
 # [1] https://helm.sh/docs/topics/plugins/#environment-variables
@@ -15,10 +15,9 @@ export XDG_CONFIG_HOME = $(HELM_HOME)/config
 export XDG_DATA_HOME = $(HELM_HOME)/data
 
 
-# TODO: bump this after the next release:
-# note: manually tag backoffice-frontend on quay.io as it doesn't auto-update (https://github.com/zinfra/backend-issues/issues/1151)
-CHARTS_VERSION=0.92.0
-WIRE_SERVER_VERSION=2.77.0
+# TODO: tag backoffice-frontend manually every time as it doesn't auto-update (https://github.com/zinfra/backend-issues/issues/1151)
+WIRE_SERVER_VERSION=2.86.0
+CHARTS_VERSION=0.112.0
 
 
 
@@ -93,14 +92,15 @@ bundle: pull-images pull-charts
 		./images.manifest \
 		./load-and-push-images.sh \
 		./README.md \
-	> ${MKFILE_DIR}/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar
+	> $(MKFILE_DIR)/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar
+	openssl dgst -sha256 $(MKFILE_DIR)/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar
 
 .PHONY: bundle-charts
 bundle-charts: pull-charts
 	tar -cf - \
 		./charts \
 		./README.md \
-	| gzip > ${MKFILE_DIR}/wire-server_charts-$(CHARTS_VERSION).tar.gz
+	| gzip > $(MKFILE_DIR)/wire-server_charts-$(CHARTS_VERSION).tar.gz
 
 .PHONY: bundle-images
 bundle-images: pull-images
@@ -109,11 +109,16 @@ bundle-images: pull-images
 		./images.manifest \
 		./load-and-push-images.sh \
 		./README.md \
-	> ${MKFILE_DIR}/wire-server_images-$(WIRE_SERVER_VERSION).tar
+	> $(MKFILE_DIR)/wire-server_images-$(WIRE_SERVER_VERSION).tar
 
 extract:
-	bzip2 --decompress --stdout ${MKFILE_DIR}/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar.bz2 \
+	bzip2 --decompress --stdout $(MKFILE_DIR)/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar.bz2 \
 	| tar -xv - -C ./offline-package
+
+upload:
+	aws s3 cp \
+		$(MKFILE_DIR)/offline-package_wire-server-$(WIRE_SERVER_VERSION)_charts-$(CHARTS_VERSION).tar \
+ 		s3://public.wire.com/networkless/
 
 
 .PHONY: registry

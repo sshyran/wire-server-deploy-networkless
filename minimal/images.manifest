@@ -21,25 +21,27 @@ docker.io/airdock/fake-sqs:0.3.1
 docker.io/roffe/kubectl:v1.13.2
 
 # wire-server
-quay.io/wire/account:4543-2.1.0-e0f7f1-v0.24.72-production
-quay.io/wire/brig:2.77.0
-quay.io/wire/cannon:2.77.0
+quay.io/wire/brig:2.86.0
+quay.io/wire/cannon:2.86.0
 docker.io/library/alpine:latest
-quay.io/wire/cargohold:2.77.0
-quay.io/wire/gundeck-schema:2.77.0
-quay.io/wire/brig-schema:2.77.0
-quay.io/wire/galley-schema:2.77.0
-quay.io/wire/spar-schema:2.77.0
+quay.io/wire/cargohold:2.86.0
+quay.io/wire/gundeck-schema:2.86.0
+quay.io/wire/brig-schema:2.86.0
+quay.io/wire/brig-index:2.86.0
+quay.io/wire/galley-schema:2.86.0
+quay.io/wire/galley-migrate-data:2.86.0
+quay.io/wire/spar-schema:2.86.0
 docker.io/library/busybox:latest
 docker.io/appropriate/curl:latest
-quay.io/wire/galley:2.77.0
-quay.io/wire/gundeck:2.77.0
-quay.io/wire/nginz_disco:2.77.0
-quay.io/wire/nginz:2.77.0
-quay.io/wire/proxy:2.77.0
-quay.io/wire/spar:2.77.0
-quay.io/wire/team-settings:15522-2.13.0-45540f-v0.24.79-production
+quay.io/wire/galley:2.86.0
+quay.io/wire/gundeck:2.86.0
+quay.io/wire/nginz_disco:2.86.0
+quay.io/wire/nginz:2.86.0
+quay.io/wire/proxy:2.86.0
+quay.io/wire/spar:2.86.0
 quay.io/wire/webapp:53834-0.1.0-4dbb18-v0.24.86-staging
+quay.io/wire/team-settings:15522-2.13.0-45540f-v0.24.79-production
+quay.io/wire/account:4543-2.1.0-e0f7f1-v0.24.72-production
 
 # nginx-ingress-controller
 quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.30.0
@@ -72,7 +74,7 @@ quay.io/prometheus/prometheus:v2.10.0
 
 # backoffice
 quay.io/wire/backoffice-frontend:2.77.0
-quay.io/wire/stern:2.77.0
+quay.io/wire/stern:2.86.0
 
 # calling-test
 quay.io/wire/avs-nwtesttool:1.0.14
