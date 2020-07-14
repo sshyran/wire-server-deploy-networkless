@@ -73,6 +73,26 @@
         CURL_CA_BUNDLE: '/etc/ssl/certs/ca-certificates.crt'
       tags: deploy_minio
 
+- name: Enable S3 DNS resolution
+  hosts: assethost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: enable resolution of S3 buckets via DNS
+      template:
+        dest: /home/ubuntu/offline_delivery/dnsmasq/dnsmasq.d/s3.endpoint
+        src: s3.endpoint.j2
+      tags: prepare_s3_endpoint
+      when: '"minio" not in groups'
+    - name: restart DNSMASQ
+      systemd:
+        name: dnsmasq
+        state: restarted
+        daemon_reload: yes
+      become: yes
+      tags: prepare_s3_endpoint
+      when: '"minio" not in groups'
+
 - name: Deploy wire-server with helm
   hosts: admin
   gather_facts: no
