@@ -27,7 +27,12 @@
             - update_debian
       tags: update_debian
     - name: create docker repo on remote target
-      include_tasks: populate_docker_repo-tasks.yml
+      include_tasks:
+        file: populate_docker_repo-tasks.yml
+        apply:
+          tags:
+            - update_docker
+      tags: update_docker
     - name: create poetry repo on remote target
       include_tasks: populate_poetry_repo-tasks.yml
     - name: create helm3 repo on remote target

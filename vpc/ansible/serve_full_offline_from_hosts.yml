@@ -49,6 +49,7 @@
         name: serve_docker_repo
       vars:
         assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
+      tags: update_docker_registry
     - name: Setup apache to serve poetry content
       include_role:
         name: serve_poetry_repo
@@ -84,9 +85,3 @@
         name: serve_minio_static_content
       vars:
         assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
-
-
-
-
-
-
