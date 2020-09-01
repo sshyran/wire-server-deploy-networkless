@@ -99,7 +99,8 @@
   become: no
   tasks:
     - name: Include helm version
-      include_vars: 'group_vars/helm_version.yml'
+      include_vars: 'helm_version.yml'
+      when: helm3_version is undefined
       tags: deploy_helm3
     - name: grab helm3 installation tarball
       get_url:

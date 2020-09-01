@@ -17,36 +17,16 @@
     path: '{{ offline_content_dir }}/static/github.com'
     state: directory
 
+- name: include our list of github repositories to mirror
+  include_vars: 'github_repos.yml'
+  when: github_repos is undefined
+
 - name: create directories for all of our organizations
   file:
-    path: '{{ offline_content_dir }}/static/github.com/{{ item }}'
+    path: "{{ offline_content_dir }}/static/github.com/{{ item | regex_replace ('/.*','') }}"
     state: directory
-  loop:
-   - 'wireapp'
-   - 'elastic'
-   - 'ANXS'
-   - 'geerlingguy'
-   - 'githubixx'
-   - 'andrewrothstein'
-   - 'cchurch'
-   - 'kubernetes-sigs'
+  loop: '{{ github_repos }}'
 
 - name: download all of our github repos.
   command: bash -e -c 'if [ -d {{ offline_content_dir }}/static/github.com/{{ item }} ]; then echo Refusing to re-download git repository {{ item }} - it is already present; else git clone --bare https://github.com/{{ item }} {{ offline_content_dir }}/static/github.com/{{ item }}; mv {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update.sample {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; chmod a+x {{ offline_content_dir }}/static/github.com/{{ item }}/hooks/post-update; cd {{ offline_content_dir }}/static/github.com/{{ item }}/ && git update-server-info ; fi; '
-  loop:
-   - 'wireapp/wire-server-deploy.git'
-   - 'wireapp/wire-server-deploy-networkless'
-   - 'wireapp/ansible-cassandra.git'
-   - 'wireapp/ansible-minio.git'
-   - 'wireapp/ansible-restund.git'
-   - 'wireapp/ansible-tinc.git'
-   - 'wireapp/ansible-ntp-verify.git'
-   - 'elastic/ansible-elasticsearch.git'
-   - 'ANXS/hostname.git'
-   - 'ANXS/apt.git'
-   - 'geerlingguy/ansible-role-java.git'
-   - 'geerlingguy/ansible-role-ntp.git'
-   - 'githubixx/ansible-role-kubectl.git'
-   - 'andrewrothstein/ansible-kubernetes-helm.git'
-   - 'cchurch/ansible-role-admin-users.git'
-   - 'kubernetes-sigs/kubespray.git'
+  loop: '{{ github_repos }}'

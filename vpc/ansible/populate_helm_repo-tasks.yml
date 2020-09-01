@@ -8,7 +8,8 @@
   when: offline_config_dir is undefined
 
 - name: include helm version
-  include_vars: 'group_vars/helm_version.yml'
+  include_vars: 'helm_version.yml'
+  when: helm3_version is undefined
 
 - name: determine what architecture the target server is running on in helm style.
   command: bash -c 'uname -m | sed -e "s/i[3-6]86/i386/" -e "s/x86_/amd/" -e "s/aarch/arm/"'
@@ -96,7 +97,8 @@
     XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
 
 - name: include our list of helm charts to mirror
-  include_vars: 'group_vars/helm_charts.yml'
+  include_vars: 'helm_charts.yml'
+  when: helm_charts is undefined
 
 - name: pull all of the helm charts
   command: bash -e -c "if [ -e {{ offline_content_dir }}/helm_repository/charts/{{ item.value.name | regex_replace('.*/','') }} ]; then echo Refusing to re-pull helm chart {{ item.value.name }} - chart already pulled. ; else helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts {{ item.value.name }} ; fi; "
