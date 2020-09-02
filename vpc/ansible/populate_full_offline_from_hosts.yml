@@ -36,7 +36,12 @@
     - name: create poetry repo on remote target
       include_tasks: populate_poetry_repo-tasks.yml
     - name: create helm3 repo on remote target
-      include_tasks: populate_helm_repo-tasks.yml
+      include_tasks:
+        file: populate_helm_repo-tasks.yml
+        apply:
+          tags:
+            - update_helm_charts
+      tags: update_helm_charts
     - name: create helm2 repo on remote target
       include_tasks: populate_helm2_repo-tasks.yml
     - name: create github repos on remote target

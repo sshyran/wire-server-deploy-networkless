@@ -82,15 +82,18 @@
     - config
     - data
 
-- name: add our helm repo to our helm environment
-  command: helm repo add wire-release https://s3-eu-west-1.amazonaws.com/public.wire.com/charts
+- name: include our list of helm charts to mirror, and version information
+  include_vars: 'group_vars/helm_charts.yml'
+
+- name: add the helm repo to our helm environment
+  shell: 'helm repo add wire-release https://s3-eu-west-1.amazonaws.com/public.wire.com/{%if helm_repo.develop %}charts-develop{% else %}charts{% endif %}'
   environment:
     XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
     XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
     XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
 
 - name: update the helm indexes
-  command: helm repo update
+  shell: helm repo update
   environment:
     XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
     XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
@@ -101,7 +104,14 @@
   when: helm_charts is undefined
 
 - name: pull all of the helm charts
-  command: bash -e -c "if [ -e {{ offline_content_dir }}/helm_repository/charts/{{ item.value.name | regex_replace('.*/','') }} ]; then echo Refusing to re-pull helm chart {{ item.value.name }} - chart already pulled. ; else helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts {{ item.value.name }} ; fi; "
+  shell: |
+    CHARTNAME={{ item.value.name | regex_replace('.*/','') }}
+    if [ -e {{ offline_content_dir }}/helm_repository/charts/$CHARTNAME -a "`grep -c -E \"{{ helm_repo.version }}\$\" {{ offline_content_dir }}/helm_repository/charts/$CHARTNAME/Chart.yaml`" != "0" ]; then
+      echo Refusing to re-pull helm chart {{ item.value.name }} - chart already pulled.
+    else 
+      rm -rf {{ offline_content_dir }}/helm_repository/charts/$CHARTNAME
+      helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts {{ item.value.name }} --version {{ helm_repo.version }}
+    fi;
   environment:
     XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
     XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'

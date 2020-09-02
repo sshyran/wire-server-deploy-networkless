@@ -2,24 +2,29 @@
 - name: ensure offline_content_dir is set
   set_fact: offline_content_dir='/home/ubuntu/offline_content/'
   when: offline_content_dir is undefined
+  tags: update_helm_charts
 
 - name: ensure offline_config_dir is set
   set_fact: offline_config_dir='/home/ubuntu/offline_config/'
   when: offline_config_dir is undefined
+  tags: update_helm_charts
 
 - name: ensure offline_delivery_dir is set
   set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
   when: offline_delivery_dir is undefined
+  tags: update_helm_charts
 
 - name: ensure assethost_ip is given.
   fail:
     msg: 'assethost_ip must be set'
   when: assethost_ip is undefined
+  tags: update_helm_charts
 
 - name: ensure fake_domain is given.
   fail:
     msg: 'fake_domain must be set'
   when: fake_domain is undefined
+  tags: update_helm_charts
 
 - name: change permissions on static content, for serving via http/https
   file:
@@ -29,6 +34,7 @@
     owner: www-data
     group: www-data
   become: yes
+  tags: update_helm_charts
 
 - name: 'create certificate for {{ item }} (1 of 3)'
   command: 'openssl genrsa -out {{ offline_delivery_dir }}/ca/{{ fake_domain }}/private/{{ item }}.key 2048'
@@ -56,6 +62,7 @@
   with_items:
     - 'get.helm.sh'
     - 'helm.{{ fake_domain }}'
+  tags: update_helm_charts
 
 - name: modify apache configuration to refer to proper ssl certs (1 of 2)
   replace:
@@ -65,6 +72,7 @@
   with_items:
     - 'get.helm.sh'
     - 'helm.{{ fake_domain }}'
+  tags: update_helm_charts
 
 - name: modify apache configuration to refer to proper ssl certs (2 of 2)
   replace:
@@ -74,6 +82,7 @@
   with_items:
     - 'get.helm.sh'
     - 'helm.{{ fake_domain }}'
+  tags: update_helm_charts
 
 - name: modify apache configuration to serve the {{ item }} (1 of 2)
   blockinfile:
@@ -86,6 +95,7 @@
   with_items:
     - 'get.helm.sh'
     - 'helm.{{ fake_domain }}'
+  tags: update_helm_charts
 
 - name: modify apache configuration to serve get.helm.sh (2 of 2)
   blockinfile:
@@ -100,6 +110,7 @@
     marker: "# {mark} ANSIBLE MANAGED BLOCK get.helm.sh"
   vars:
     domain: 'get.helm.sh'
+  tags: update_helm_charts
 
 - name: get a list of subdirectories of the helm repository.
   find:
@@ -107,6 +118,7 @@
     file_type: directory
     patterns: "*"
   register: helm_repo_targets
+  tags: update_helm_charts
 
 - name: modify apache configuration to serve the helm repository (2 of 2)
   blockinfile:
@@ -122,6 +134,7 @@
   vars:
     domain: 'helm.{{ fake_domain }}'
   with_items: '{{ helm_repo_targets.files }}'
+  tags: update_helm_charts
 
 - name: 'enable apache configuration for {{ item }}'
   file:
@@ -132,6 +145,7 @@
     - 'get.helm.sh'
     - 'helm.{{ fake_domain }}'
   become: yes
+  tags: update_helm_charts
 
 - name: restart apache
   systemd:
@@ -139,6 +153,7 @@
     state: restarted
     daemon_reload: yes
   become: yes
+  tags: update_helm_charts
 
 - name: add DNS entry for {{ item }}
   copy:

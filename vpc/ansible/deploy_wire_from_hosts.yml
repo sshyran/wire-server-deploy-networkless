@@ -126,6 +126,18 @@
         dest: '/usr/local/bin/helm'
         mode: 755
       tags: deploy_helm3
+    - name: ensure we can download helm charts (1 of 2)
+      file:
+        path: /home/ubuntu/wire-server-deploy/helm.internal.vpc
+        state: absent
+      tags: gather_helm_charts
+      ignore_errors: yes
+    - name: ensure we can download helm charts (2 of 2)
+      file:
+        path: /home/ubuntu/wire-server-deploy/wire
+        state: absent
+      tags: gather_helm_charts
+      ignore_errors: yes
     - name: download helm charts
       command: 'wget -r -l 10 --quiet https://helm.internal.vpc/charts/'
       args:
