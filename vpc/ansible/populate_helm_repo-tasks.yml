@@ -82,8 +82,9 @@
     - config
     - data
 
-- name: include our list of helm charts to mirror, and version information
-  include_vars: 'group_vars/helm_charts.yml'
+- name: include our definitions of the helm repo to use.
+  include_vars: 'helm_repo.yml'
+  when: helm_repo is undefined
 
 - name: add the helm repo to our helm environment
   shell: 'helm repo add wire-release https://s3-eu-west-1.amazonaws.com/public.wire.com/{%if helm_repo.develop %}charts-develop{% else %}charts{% endif %}'

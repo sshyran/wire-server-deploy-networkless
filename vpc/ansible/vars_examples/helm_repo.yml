@@ -1,0 +1,5 @@
+# the version of the helm charts to mirror.
+helm_repo:
+  version: 0.105.0
+  develop: no
+  
