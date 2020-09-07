@@ -1,0 +1,37 @@
+debian_package_collections:
+  assethost:
+    - isc-dhcp-server
+    - dnsmasq
+  raw-content-delivery:
+    - apache2
+  poetry:
+    - python2.7
+    - python-pip
+  goldenimage:
+    - gdebi-core
+    - ngrep
+    - ntp
+    - plymouth-disabler
+    - sysstat
+    - tree
+    - nload
+    - resolvconf
+    - mdadm
+  ansible:
+    - sshpass
+  unarchive-deps:
+    - python-apt
+  cassandra:
+    - openjdk-8-jdk
+    - libjemalloc1
+    - policykit-1
+  julia:
+    - emacs25-nox
+  akshay:
+    - jq
+  debugging:
+    - nmap
+  python3:
+    - python3-pip
+    - python3-venv
+    

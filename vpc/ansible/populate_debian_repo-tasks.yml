@@ -113,47 +113,17 @@
     state: present
   become: yes
 
-- name: add package config for assethost
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/assethost'
-    content: |
-      PACKAGES aptitude-r
-      isc-dhcp-server dnsmasq
+- name: include our list of debian images to mirror
+  include_vars: 'debian_packages.yml'
+  when: debian_package_collections is undefined
 
-- name: add package config for raw content delivery
+- name: create package configs
   copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/raw-content-delivery'
+    dest: '{{ offline_config_dir }}/fai_config/package_config/{{ item.key }}'
     content: |
       PACKAGES aptitude-r
-      apache2
-
-- name: add package config for poetry
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/poetry'
-    content: |
-      PACKAGES aptitude-r
-      python2.7 python-pip
-
-- name: add package config for our golden image process
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/goldenimage'
-    content: |
-      PACKAGES aptitude-r
-      gdebi-core ngrep ntp plymouth-disabler sysstat tree nload resolvconf mdadm
-
-- name: add package config for ansible
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/ansible'
-    content: |
-      PACKAGES aptitude-r
-      sshpass
-
-- name: add package config for unarchive-deps
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/unarchive-deps'
-    content: |
-      PACKAGES aptitude-r
-      python-apt
+      {{ item.value | join(" ") }}
+  with_dict: '{{ debian_package_collections }}'
 
 - name: add package config for kubernetes
   copy:
@@ -167,40 +137,12 @@
       PACKAGES aptitude-r
       docker-ce=5:18.09.5~3-0~ubuntu-bionic
 
-- name: add package config for cassandra
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/cassandra'
-    content: |
-      PACKAGES aptitude-r
-      openjdk-8-jdk libjemalloc1 policykit-1
-
 - name: add package config for elasticsearch
   copy:
     dest: '{{ offline_config_dir }}/fai_config/package_config/elasticsearch'
     content: |
       PACKAGES aptitude-r
       openjdk-8-jdk elasticsearch-oss=6.6.0
-
-- name: add package config for emacs
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/emacs'
-    content: |
-      PACKAGES aptitude-r
-      emacs25-nox
-
-- name: add package config for debugging tools
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/debugging'
-    content: |
-      PACKAGES aptitude-r
-      nmap
-
-- name: add package config for python3
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/python3'
-    content: |
-      PACKAGES aptitude-r
-      python3-pip python3-venv
 
 - name: modify fai-mirror (Codename)
   replace:
