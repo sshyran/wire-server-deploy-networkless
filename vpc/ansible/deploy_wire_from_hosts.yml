@@ -79,9 +79,12 @@
   become: no
   tasks:
     - name: enable resolution of S3 buckets via DNS
-      template:
+      copy:
+        content: |
+          address=/s3-eu-central-1.amazonaws.com/{{ s3_ip }}
+          address=/s3.eu-central-1.amazonaws.com/{{ s3_ip }}
+          address=/s3-r-w.eu-central-1.amazonaws.com/{{ s3_ip }}
         dest: /home/ubuntu/offline_delivery/dnsmasq/dnsmasq.d/s3.endpoint
-        src: s3.endpoint.j2
       tags: prepare_s3_endpoint
       when: '"minio" not in groups'
     - name: restart DNSMASQ
@@ -92,6 +95,26 @@
       become: yes
       tags: prepare_s3_endpoint
       when: '"minio" not in groups'
+
+- name: Enable LetsEncrypt DNS resolution
+  hosts: assethost
+  gather_facts: no
+  become: no
+  tasks:
+    - name: enable resolution of acme servers via DNS
+      copy:
+        content: |
+          address=/acme-staging-v02.api.letsencrypt.org/{{ acme_staging_ip }}
+          address=/acme-v02.api.letsencrypt.org/{{ acme_production_ip }}
+        dest: /home/ubuntu/offline_delivery/dnsmasq/dnsmasq.d/acme.endpoint
+      tags: prepare_acme_dns
+    - name: restart DNSMASQ
+      systemd:
+        name: dnsmasq
+        state: restarted
+        daemon_reload: yes
+      become: yes
+      tags: prepare_acme_dns
 
 - name: Deploy wire-server with helm
   hosts: admin
@@ -248,6 +271,34 @@
         regexp: '.*teamSettings:.*\n'
         replace: ''
       tags: config_wire_server
+    - name: place s3 bucket name in cargohold section of values file.
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/values.yaml'
+        regexp: 's3Bucket:.*\n'
+        replace: 's3Bucket: {{ aws_cargohold_bucket }}\n'
+      tags: config_wire_server_s3
+    - name: place s3 endpoint name in cargohold section of values file.
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/values.yaml'
+        regexp: 's3Endpoint:.*\n'
+        replace: 's3Endpoint: https://s3.{{ aws_region }}.amazonaws.com:443\n'
+      tags: config_wire_server_s3
+    - name: place s3 bucket key in cargohold section of the secrets file.
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+        after: 'cargohold:'
+        before: 'galley:'
+        regexp: 'awsKeyId:.*\n'
+        replace: 'awsKeyId: {{ aws_cargohold_key }}\n'
+      tags: config_wire_server_s3
+    - name: place s3 bucket access secret in cargohold section of the secrets file.
+      replace:
+        path: '/home/ubuntu/wire-server-deploy/my-wire-server/secrets.yaml'
+        after: 'cargohold:'
+        before: 'galley:'
+        regexp: 'awsSecretKey:.*\n'
+        replace: 'awsSecretKey: {{ aws_cargohold_secret }}\n'
+      tags: config_wire_server_s3
     - name: create a secret for restund
       command: 'bash -c "openssl rand -base64 64 | env LC_CTYPE=C tr -dc a-zA-Z0-9 | head -c 42 > my-wire-server/restund.txt"'
       args:
@@ -342,9 +393,40 @@
         regexp: 'example.com'
         replace: '{{ real_domain }}'
       tags: config_ingress
-    - name: pull nginz-
-      replace:
-        path: '/home/ubuntu/wire-server-deploy/my-nginx-ingress/values.yaml'
-        regexp: 'nginz-'
-        replace: ''
+    - name: use cert-manager
+      copy:
+        dest: /home/ubuntu/wire-server-deploy/my-nginx-ingress/values-override-cert-manager.yaml
+        content: |
+          tls:
+            useCertManager: true
+          certManager:
+            certmasterEmail: backend+exxon-dev@wire.com
+            inTestMode: false
+      tags: config_ingress
+    - name: create namespace for cert-manager
+      shell: |
+        kubectl apply -f -
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+        stdin: |
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: cert-manager
+      tags: config_ingress
+    - name: install cert-manager CRDs
+      shell: |
+        helm upgrade --install -n cert-manager --set 'installCRDs=true' cert-manager wire/cert-manager
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      tags: config_ingress
+    - name: install nginx-ingress-controller
+      command: 'helm upgrade --install nginx-ingress-controller wire/nginx-ingress-controller --wait'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
+      tags: config_ingress
+    - name: install nginx-ingress-services
+      command: 'helm upgrade --install nginx-ingress-services wire/nginx-ingress-services -f my-nginx-ingress/values.yaml -f my-nginx-ingress/secrets.yaml -f my-nginx-ingress/values-override-cert-manager.yaml --wait'
+      args:
+        chdir: '/home/ubuntu/wire-server-deploy/'
       tags: config_ingress
