@@ -159,7 +159,7 @@
 
 # FIXME: flag for if we are using cert-manager or not?
 
-- name: redirect 80 -> 31772 and 443 -> 31773 when kubenodes talk to the first kubernetes node.
+- name: redirect 80 -> 31772 and 443 -> 31773 when kubenodes talk to the first kubenode.
   hosts: kube-kubenode
   gather_facts: yes
   remote_user: ubuntu
@@ -175,8 +175,10 @@
         destination: "{{ hostvars[groups['kube-kubenode'][0]]['ansible_default_ipv4']['address'] }}"
         destination_port: "443"
         jump: "REDIRECT"
-        to_ports: "31773"
+        to_ports: '{{ nginx_https_port }}'
         state: "present"
+      vars:
+        nginx_https_port: '31773'
       tags: add_iptables
     - name: "Redirect http traffic to the kubernetes ingress on cni0, when outgoing is kubenode01"
       become: true
@@ -189,6 +191,8 @@
         destination: "{{ hostvars[groups['kube-kubenode'][0]]['ansible_default_ipv4']['address'] }}"
         destination_port: "80"
         jump: "REDIRECT"
-        to_ports: "31772"
+        to_ports: '{{ nginx_http_port }}'
         state: "present"
+      vars:
+        nginx_http_port: '31772'
       tags: add_iptables

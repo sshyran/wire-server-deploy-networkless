@@ -1,3 +1,5 @@
+# This is running on the bastion host. It assumes it currently has internet.
+# It fetches from ubuntu package sources into /home/ubuntu/offline_content/debian
 ---
 - name: ensure offline_content_dir is set
   set_fact: offline_content_dir='/home/ubuntu/offline_content/'
