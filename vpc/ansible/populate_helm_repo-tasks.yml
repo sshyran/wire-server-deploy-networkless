@@ -86,8 +86,16 @@
   include_vars: 'helm_repo.yml'
   when: helm_repo is undefined
 
-- name: add the helm repo to our helm environment
+- name: add the wire helm repo to our helm environment
   shell: 'helm repo add wire-release https://s3-eu-west-1.amazonaws.com/public.wire.com/{%if helm_repo.develop %}charts-develop{% else %}charts{% endif %}'
+  environment:
+    XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
+    XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
+    XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
+
+# XDG_CACHE_HOME=cache XDG_CONFIG_HOME=config XDG_DATA_HOME=home  helm repo add jetstack https://charts.jetstack.io
+- name: add the jetstack helm repo to our helm environment
+  shell: helm repo add jetstack https://charts.jetstack.io
   environment:
     XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
     XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
@@ -118,3 +126,16 @@
     XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
     XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
   with_dict: '{{ helm_charts }}'  
+
+# XDG_CACHE_HOME=cache XDG_CONFIG_HOME=config XDG_DATA_HOME=home helm pull --untar --untardir charts jetstack/cert-manager
+- name: pull the cert-manager chart, from jetstack
+  shell: |
+    CHARTNAME=cert-manager
+    CHARTVERSION=0.15.2
+    rm -rf {{ offline_content_dir }}/helm_repository/charts/$CHARTNAME
+    helm pull --destination {{ offline_content_dir }}/helm_repository/charts --untar --untardir {{ offline_content_dir }}/helm_repository/charts jetstack/$CHARTNAME --version $CHARTVERSION
+  environment:
+    XDG_CACHE_HOME: '{{ offline_config_dir }}/helm_repository/cache'
+    XDG_CONFIG_HOME: '{{ offline_config_dir }}/helm_repository/config'
+    XDG_DATA_HOME: '{{ offline_config_dir }}/helm_repository/data'
+

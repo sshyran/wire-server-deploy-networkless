@@ -84,6 +84,30 @@
       with_items: "{{ target_hosts.split(' ') }}"
       when: '"kube-kubenode" in groups and groups["kube-kubenode"]'
 
+- name: gather facts from kubenodes.
+  hosts: kube-kubenode
+  gather_facts: yes
+  tasks:
+    - name: do nothing.
+      shell: "echo"
+      tags: all_the_dns
+
+- name: add DNS entry for our external names, directing traffic to kubenode01
+  hosts: assethost
+  gather_facts: yes
+  remote_user: ubuntu
+  tasks:
+    - name: ensure offline_delivery_dir is set
+      set_fact: offline_delivery_dir='/home/ubuntu/offline_delivery/'
+      when: offline_delivery_dir is undefined
+      tags: all_the_dns
+    - name: add entry to dnsmasq
+      copy:
+        content: |
+          address=/{{ real_domain }}/{{ hostvars[groups['kube-kubenode'][0]]['ansible_default_ipv4']['address'] }}
+        dest: '{{ offline_delivery_dir }}/dnsmasq/dnsmasq.d/{{ real_domain }}'
+      tags: all_the_dns
+
 - name: use offline content from assethost
   hosts: admin, cassandra, elasticsearch, minio, kube-kubenode
   gather_facts: no
@@ -132,3 +156,43 @@
         - 'gcr.io'
         - 'quay.io'
         - 'registry-1.docker.io'
+
+# FIXME: flag for if we are using cert-manager or not?
+
+- name: redirect 80 -> 31772 and 443 -> 31773 when kubenodes talk to the first kubenode.
+  hosts: kube-kubenode
+  gather_facts: yes
+  remote_user: ubuntu
+  tasks:
+    - name: "Redirect TLS traffic to the kubernetes ingress on cni0, when outgoing is kubenode01"
+      become: true
+      iptables:
+        table: "nat"
+        chain: "PREROUTING"
+        in_interface: "cni0"
+        protocol: "tcp"
+        match: "tcp"
+        destination: "{{ hostvars[groups['kube-kubenode'][0]]['ansible_default_ipv4']['address'] }}"
+        destination_port: "443"
+        jump: "REDIRECT"
+        to_ports: '{{ nginx_https_port }}'
+        state: "present"
+      vars:
+        nginx_https_port: '31773'
+      tags: add_iptables
+    - name: "Redirect http traffic to the kubernetes ingress on cni0, when outgoing is kubenode01"
+      become: true
+      iptables:
+        table: "nat"
+        chain: "PREROUTING"
+        in_interface: "cni0"
+        protocol: "tcp"
+        match: "tcp"
+        destination: "{{ hostvars[groups['kube-kubenode'][0]]['ansible_default_ipv4']['address'] }}"
+        destination_port: "80"
+        jump: "REDIRECT"
+        to_ports: '{{ nginx_http_port }}'
+        state: "present"
+      vars:
+        nginx_http_port: '31772'
+      tags: add_iptables
