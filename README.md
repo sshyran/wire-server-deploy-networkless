@@ -435,7 +435,7 @@ FIXME: what about restund?
 cd ~
 git clone https://github.com/wireapp/wire-server-deploy-networkless.git
 cd wire-server-deploy/ansible
-poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
+ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml -vv
 ```
 
 helm upgrade to add the demo-databases-ephemeral.
@@ -469,7 +469,7 @@ If you set the proxy explicitly in the k8s environment, these errors should go a
 #### With ansible:
 
 ```
-poetry run ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/kubernetes_proxy.yml -vv -e proxy_host=10.0.0.1 -e proxy_port=3128
+ansible-playbook -i hosts.ini ~/wire-server-deploy-networkless/admin_vm/kubernetes_proxy.yml -vv -e proxy_host=10.0.0.1 -e proxy_port=3128
 ```
 
 #### Manually:
