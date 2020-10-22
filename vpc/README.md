@@ -35,8 +35,6 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook populate_debian_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * run populate_docker_repo.yml on the bastion host to download our docker images.
   * ansible-playbook populate_docker_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
-* run populate_poetry_repo.yml on the bastion host to download our poetry repository.
-  * ansible-playbook populate_poetry_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * run populate_helm_repo.yml on the bastion host to download our helm 3 charts and helm3 binary.
   * ansible-playbook populate_helm_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e first_target_ip=$bastion
 * run populate_helm2_repo.yml on the bastion host to download our helm2 binary and index.
@@ -66,8 +64,6 @@ From wire-server-deploy-networkless's /vpc/ansible/
   * ansible-playbook serve_debian_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_docker_repo.yml to set up docker, and serve docker content through apache.
   * ansible-playbook serve_docker_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
-* run serve_poetry_repo.yml to serve the poetry repository.
-  * ansible-playbook serve_poetry_repo.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_kubernetes_static_content.yml to serve binaries to kubernetes.
   * ansible-playbook serve_kubernetes_static_content.yml -e wdt_infra=vpc -e wdt_region=eu-central-1 -e wdt_env=offline -e fake_domain=wire.com -e bastion_eip=$bastion -e first_target_ip=$assethost
 * run serve_helm2_repo.yml to serve the helm2 binary and index.
@@ -117,7 +113,7 @@ From wire-server-deploy-networkless's /vpc/ansible/
 
 * SSH into the admin host, and use it as the "Operator's machine" when following the instructions in https://docs.wire.com/how-to/install/ansible-VMs.html. Continue with these instructions until you get to 'Provisioning virtual machines'.
 * At the 'Provisioning virtual machines' section, Skip provisioning (as we have already done that with terraform), and continue with 'Preparing to run ansible'.
-* In the 'Authentication' section, perform the steps in 'Configuring SSH keys'. Continue until you get to 'Use poetry to run ansible, and deploy Elasticsearch'.
+* In the 'Authentication' section, perform the steps in 'Configuring SSH keys'. Continue until you get to 'Deploy Elasticsearch'.
   * In the 'ELASTICSEARCH' section of hosts.ini, add the following two lines to tell elasticsearch to use our APT mirror.
   ```
   es_apt_key = "https://download.docker.com/linux/ubuntu/gpg"

@@ -33,8 +33,6 @@
           tags:
             - update_docker
       tags: update_docker
-    - name: create poetry repo on remote target
-      include_tasks: populate_poetry_repo-tasks.yml
     - name: create helm3 repo on remote target
       include_tasks:
         file: populate_helm_repo-tasks.yml

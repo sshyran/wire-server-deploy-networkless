@@ -34,10 +34,6 @@ debian_package_collections:
     - containerd.io
     - 'docker-ce-cli=5:18.09.5~3-0~ubuntu-bionic'
     - 'docker-ce=5:18.09.5~3-0~ubuntu-bionic'
-  poetry:
-    - python-pip
-    - python3-pip
-    - python3-venv
   unarchive-deps:
     - python-apt
   julia:

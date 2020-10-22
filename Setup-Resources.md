@@ -15,32 +15,6 @@ This file is divided into three parts:
 
 ## Prose
 
-### Poetry
-
-In order to enable the installanion of poetry, we need to provide raw content delivery over HTTP and HTTPS, and set up the APT repository. Once those are done, we need to serve the 'https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py' URL.
-
-#### HTTP/HTTPS content delivery
-
-Follow the instructions in 'Raw Content/HTTP/Setup', and 'Raw Content/HTTPS/Setup'.
-
-#### APT repository
-
-Follow the instructions in 'Repositories/APT' to set up an apt repository. 
-* Set up the APT repository on the machine you want to run ansible from.
-
-#### Raw Content
-
-Follow the instructions in 'Raw Content/HTTPS' to serve our git-poetry.py script.
-* All of the examples in this set of directions were written with this step in mind. Please compare them to the following bullet points, as these points are what following raw content directions are going to look like.
- * use 'raw.githubusercontent.com' as the domain name
- * create $CONTENTHOME/sdispater/poetry/master , to place content in.
- * point the '/sdispater' directory of raw.githubusercontent.com to $CONTENTHOME/sdispater .
- * populate the content by using curl to download https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py, placing it at $CONTENTHOME/sdispater/poetry/master/get-poetry.py .
-
-#### Poetry Repository
-
-Follow the directions in 'Repositories/Poetry Repository' 
-
 ### Ansible
 
 #### Git pull

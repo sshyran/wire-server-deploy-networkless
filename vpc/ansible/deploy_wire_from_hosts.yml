@@ -16,7 +16,7 @@
   become: no
   tasks:
     - name: deploy kubernetes
-      shell: 'export PATH=$PATH:/home/ubuntu/.poetry/bin/ && poetry run ansible-playbook -i /home/ubuntu/hosts.ini kubernetes.yml -vv'
+      shell: 'ansible-playbook -i /home/ubuntu/hosts.ini kubernetes.yml -vv'
       args:
         chdir: '/home/ubuntu/wire-server-deploy/ansible/'
       environment:
@@ -40,7 +40,7 @@
   become: no
   tasks:
     - name: deploy cassandra
-      shell: 'export PATH=$PATH:/home/ubuntu/.poetry/bin/ && poetry run ansible-playbook -i /home/ubuntu/hosts.ini cassandra.yml -vv'
+      shell: 'ansible-playbook -i /home/ubuntu/hosts.ini cassandra.yml -vv'
       args:
         chdir: '/home/ubuntu/wire-server-deploy/ansible/'
       environment:
@@ -53,7 +53,7 @@
   become: no
   tasks:
     - name: deploy elasticsearch
-      shell: 'export PATH=$PATH:/home/ubuntu/.poetry/bin/ && poetry run ansible-playbook -i /home/ubuntu/hosts.ini elasticsearch.yml -vv'
+      shell: 'ansible-playbook -i /home/ubuntu/hosts.ini elasticsearch.yml -vv'
       args:
         chdir: '/home/ubuntu/wire-server-deploy/ansible/'
       environment:
@@ -66,7 +66,7 @@
   become: no
   tasks:
     - name: deploy minio
-      shell: 'export PATH=$PATH:/home/ubuntu/.poetry/bin/ && poetry run ansible-playbook -i /home/ubuntu/hosts.ini minio.yml -vv'
+      shell: 'ansible-playbook -i /home/ubuntu/hosts.ini minio.yml -vv'
       args:
         chdir: '/home/ubuntu/wire-server-deploy/ansible/'
       environment:
@@ -178,7 +178,7 @@
         chdir: '/home/ubuntu/wire-server-deploy/'
       tags: gather_helm_charts
     - name: run ansible script to populate values files.
-      shell: 'export PATH=$PATH:/home/ubuntu/.poetry/bin/ && poetry run ansible-playbook -i /home/ubuntu/hosts.ini helm_external.yml -vv'
+      shell: 'ansible-playbook -i /home/ubuntu/hosts.ini helm_external.yml -vv'
       args:
         chdir: '/home/ubuntu/wire-server-deploy/ansible/'
       environment:

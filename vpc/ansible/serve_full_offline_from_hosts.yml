@@ -50,11 +50,6 @@
       vars:
         assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
       tags: update_docker_registry
-    - name: Setup apache to serve poetry content
-      include_role:
-        name: serve_poetry_repo
-      vars:
-        assethost_ip: "{{ groups['assethost'] | map('extract', hostvars, ['ansible_host']) | join(',') }}"
     - name: Setup to serve static kubernetes content on remote target
       include_role:
         name: serve_kubernetes_static_content

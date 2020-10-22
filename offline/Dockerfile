@@ -17,7 +17,6 @@ RUN apk add --no-cache \
     tar \
     wget \
     python \
-    py2-pip \
     python2-dev \
     gnupg \
     coreutils \
@@ -30,8 +29,6 @@ RUN apk add --no-cache \
     the_silver_searcher \
     sshpass \
     rsync
-
-RUN pip install poetry
 
 COPY . /src
 

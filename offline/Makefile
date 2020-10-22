@@ -2,13 +2,6 @@
 
 SHELL=/bin/bash
 
-.PHONY: poetry
-poetry:
-	curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py > get-poetry.py
-	python get-poetry.py --preview -y
-	rm -f get-poetry.py
-	source $$HOME/.poetry/env
-
 .PHONY: clone
 clone:
 	rm -rf wire-server
@@ -20,7 +13,6 @@ clone:
 
 .PHONY: wire-server-deploy
 wire-server-deploy:
-	cd wire-server-deploy/ansible && poetry install && make download
 	cd wire-server-deploy/ansible && ln -s ../../wire-server-deploy-networkless/admin_vm/setup-mitm-cert.yml setup-mitm-cert.yml
 	cd wire-server-deploy/ansible && ln -s ../../wire-server-deploy-networkless/admin_vm/kubernetes_proxy.yml kubernetes_proxy.yml
 
