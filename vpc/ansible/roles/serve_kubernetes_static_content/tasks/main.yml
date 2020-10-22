@@ -81,7 +81,7 @@
     - 'github.com'
     - 'storage.googleapis.com'
 
-- name: modify apache configuration to serve the poetry repository (1 of 2)
+- name: modify apache configuration to serve the kubernetes static content repositories (1 of 2)
   blockinfile:
     path: '{{ offline_delivery_dir }}/apache/sites/000-{{ item }}.conf'
     block: |
