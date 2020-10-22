@@ -21,6 +21,7 @@
         pkg:
         - python2.7
         - python-pip
+    # FIXME: master.
     - name: grab get poetry script
       get_url:
         url: 'https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py'
@@ -34,10 +35,15 @@
         state: link
     - name: reset ssh connection, so that we have the poetry environment loaded.
       meta: reset_connection
+    # Note: uses the helm chart version to grab the correct wire-server-deploy version.
+    - name: include our definitions of the helm repo to use.
+      include_vars: 'helm_repo.yml'
+      when: helm_repo is undefined
     - name: grab wire-server-deploy
       git:
         repo: 'https://github.com/wireapp/wire-server-deploy.git'
         dest: '/home/ubuntu/wire-server-deploy'
+        version: 'chart/wire-server-{{helm_repo.version}}'
     - name: install wire-server-deploy dependencies with poetry
       shell: 'export PATH=$PATH:/home/ubuntu/.poetry/bin/ && poetry install'
       args:
