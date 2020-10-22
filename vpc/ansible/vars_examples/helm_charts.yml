@@ -1,9 +1,4 @@
-# the version of the helm charts to mirror.
-helm_repo:
-  version: 0.105.0
-  develop: no
-  
-# the list of helm charts to mirror.
+# the helm charts we require to install wire.
 helm_charts:
   cassandra-external:
     name: wire-release/cassandra-external

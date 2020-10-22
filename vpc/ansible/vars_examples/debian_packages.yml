@@ -1,12 +1,16 @@
 debian_package_collections:
+  ansible:
+    - sshpass
   assethost:
-    - isc-dhcp-server
     - dnsmasq
-  raw-content-delivery:
     - apache2
-  poetry:
-    - python2.7
-    - python-pip
+  cassandra:
+    - openjdk-8-jdk
+    - libjemalloc1
+    - policykit-1
+  elasticsearch:
+    - openjdk-8-jdk
+    - 'elasticsearch-oss=6.6.0'
   goldenimage:
     - gdebi-core
     - ngrep
@@ -17,21 +21,28 @@ debian_package_collections:
     - nload
     - resolvconf
     - mdadm
-  ansible:
-    - sshpass
+    - python2.7
+  kubernetes:
+    - aufs-tools
+    - python-httplib2
+    - socat
+    - unzip
+    - ipvsadm
+    - pigz
+    - cgroupfs-mount
+    - libltdl7
+    - containerd.io
+    - 'docker-ce-cli=5:18.09.5~3-0~ubuntu-bionic'
+    - 'docker-ce=5:18.09.5~3-0~ubuntu-bionic'
+  poetry:
+    - python-pip
+    - python3-pip
+    - python3-venv
   unarchive-deps:
     - python-apt
-  cassandra:
-    - openjdk-8-jdk
-    - libjemalloc1
-    - policykit-1
   julia:
     - emacs25-nox
   akshay:
     - jq
   debugging:
     - nmap
-  python3:
-    - python3-pip
-    - python3-venv
-    
