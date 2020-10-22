@@ -22,9 +22,13 @@
     path: '{{ offline_content_dir }}/static/raw.githubusercontent.com/sdispater/poetry/master/'
     state: directory
 
+- name: include our desired poetry version
+  include_vars: 'poetry_version.yml'
+  when: poetry_version is undefined
+
 - name: download get-poetry.py
   get_url:
-    url: https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py
+    url: https://raw.githubusercontent.com/sdispater/poetry/{{ poetry_version }}/get-poetry.py
     dest: '{{ offline_content_dir }}/static/raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py'
 
 - name: create offline content directory for pypi.org
@@ -47,12 +51,14 @@
     name: jq
   become: yes
 
-- name: detect poetry version
+# -- we don't actually use this, but i like having it in the log.
+- name: detect latest poetry version
   command: 'bash -c "cat {{ offline_content_dir }}/static/pypi.org/pypi/poetry/json | jq .info.version | tr -d \\\""'
-  register: poetry_version
+  register: poetry_latest_version
 
+# FIXME: use version here?
 - name: detect poetry version sha256
-  command: 'bash -c "cat {{ offline_content_dir }}/static/pypi.org/pypi/poetry/json | jq .releases.\\\"0.12.17\\\"[1].digests.sha256 | tr -d \\\""'
+  command: 'bash -c "cat {{ offline_content_dir }}/static/pypi.org/pypi/poetry/json | jq .releases.\\\"{{ poetry_version }}\\\"[1].digests.sha256 | tr -d \\\""'
   register: poetry_sha256
 
 - name: create offline content directory for github.com
@@ -62,22 +68,22 @@
 
 - name: creating static offline content directory for poetry release
   file:
-    path: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/'
+    path: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version}}/'
     state: directory
 
 - name: grab the poetry binary sha256sum
   get_url:
-    url: 'https://github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.sha256sum'
-    dest: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.sha256sum'
+    url: 'https://github.com/sdispater/poetry/releases/download/{{ poetry_version }}/poetry-{{ poetry_version }}-linux.sha256sum'
+    dest: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version }}/poetry-{{ poetry_version }}-linux.sha256sum'
 
 - name: detect poetry binary sha256sum
-  command: 'cat {{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.sha256sum'
+  command: 'cat {{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version }}/poetry-{{ poetry_version }}-linux.sha256sum'
   register: poetry_binary_sha256
 
 - name: download poetry
   get_url:
-    url: 'https://github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.tar.gz'
-    dest: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version.stdout }}/poetry-{{ poetry_version.stdout }}-linux.tar.gz'
+    url: 'https://github.com/sdispater/poetry/releases/download/{{ poetry_version }}/poetry-{{ poetry_version }}-linux.tar.gz'
+    dest: '{{ offline_content_dir }}/static/github.com/sdispater/poetry/releases/download/{{ poetry_version }}/poetry-{{ poetry_version }}-linux.tar.gz'
     checksum: 'sha256:{{ poetry_binary_sha256.stdout }}'
 
 - name: make a directory for poetry locks
@@ -85,9 +91,13 @@
     path: '{{ offline_config_dir }}/poetry-repo/locks'
     state: directory
 
+- name: include the helm repo version to use.
+  include_vars: 'helm_repo.yml'
+  when: helm_repo is undefined
+
 - name: download the latest wire-server-deploy poetry lock
   get_url:
-    url: 'https://raw.githubusercontent.com/wireapp/wire-server-deploy/master/ansible/poetry.lock'
+    url: 'https://raw.githubusercontent.com/wireapp/wire-server-deploy/chart/wire-server-{{helm_repo.version}}/ansible/poetry.lock'
     dest: '{{ offline_config_dir }}/poetry-repo/locks/wire-server-deploy.lock'
 
 - name: determine target python package names
