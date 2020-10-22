@@ -121,34 +121,6 @@
   gather_facts: no
   become: no
   tasks:
-    - name: Include helm version
-      include_vars: 'helm_version.yml'
-      when: helm3_version is undefined
-      tags: deploy_helm3
-    - name: grab helm3 installation tarball
-      get_url:
-        url: 'https://get.helm.sh/helm-{{ helm3_version }}-linux-amd64.tar.gz'
-        dest: '/home/ubuntu/helm-{{ helm3_version }}-linux-amd64.tar.gz'
-      tags: deploy_helm3
-    - name: extract helm3 binary
-      unarchive:
-        remote_src: yes
-        src: '/home/ubuntu/helm-{{ helm3_version }}-linux-amd64.tar.gz'
-        dest: '/home/ubuntu/'
-        creates: '/home/ubuntu/helm'
-        extra_opts:
-          - --strip=1
-          - --wildcards
-          - '*/helm'
-      tags: deploy_helm3
-    - name: copy helm3 binary into place
-      become: yes
-      copy:
-        remote_src: True
-        src: '/home/ubuntu/helm'
-        dest: '/usr/local/bin/helm'
-        mode: 755
-      tags: deploy_helm3
     - name: ensure we can download helm charts (1 of 2)
       file:
         path: /home/ubuntu/wire-server-deploy/helm.internal.vpc

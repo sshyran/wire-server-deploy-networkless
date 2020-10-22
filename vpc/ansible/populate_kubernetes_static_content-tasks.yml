@@ -11,10 +11,6 @@
   set_fact: kubernetes_version='v1.14.2'
   when: kubernetes_version is undefined
 
-- name: ensure a helm version is set
-  set_fact: helm_version='v2.13.1'
-  when: helm_version is undefined
-
 - name: create offline content directory for static web content
   file:
     path: '{{ offline_content_dir }}/static'
@@ -54,11 +50,6 @@
   get_url:
     url: 'https://dl.k8s.io/{{ kubernetes_version }}/kubernetes-client-linux-amd64.tar.gz'
     dest: '{{ offline_content_dir }}/static/dl.k8s.io/{{ kubernetes_version }}/kubernetes-client-linux-amd64.tar.gz'
-
-- name: download helm
-  get_url:
-    url: 'https://storage.googleapis.com/kubernetes-helm/helm-{{ helm_version }}-linux-amd64.tar.gz'
-    dest: '{{ offline_content_dir }}/static/storage.googleapis.com/kubernetes-helm/helm-{{ helm_version }}-linux-amd64.tar.gz'
 
 - name: download the kubernetes release files
   get_url:
