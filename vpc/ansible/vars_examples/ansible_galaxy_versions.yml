@@ -1,0 +1,4 @@
+ansible_galaxy_packages:
+  unarchive_deps:
+    - 'v1.0.12'
+    - 'v1.1.2'

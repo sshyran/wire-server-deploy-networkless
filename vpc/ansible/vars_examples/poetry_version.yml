@@ -1,0 +1,5 @@
+# last known good version
+#poetry_version: '0.12.17'
+
+# an experiment.
+poetry_version: '1.1.3'

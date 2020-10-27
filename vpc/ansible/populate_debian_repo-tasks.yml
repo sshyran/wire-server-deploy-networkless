@@ -119,6 +119,7 @@
   include_vars: 'debian_packages.yml'
   when: debian_package_collections is undefined
 
+# FIXME: be detailed enough to remove the '-r' on 'aptitude-r'
 - name: create package configs
   copy:
     dest: '{{ offline_config_dir }}/fai_config/package_config/{{ item.key }}'
@@ -126,25 +127,6 @@
       PACKAGES aptitude-r
       {{ item.value | join(" ") }}
   with_dict: '{{ debian_package_collections }}'
-
-- name: add package config for kubernetes
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/kubernetes'
-    content: |
-      PACKAGES aptitude-r
-      aufs-tools python-httplib2 socat unzip ipvsadm pigz cgroupfs-mount
-      libltdl7 containerd.io
-      PACKAGES aptitude
-      docker-ce-cli=5:18.09.5~3-0~ubuntu-bionic
-      PACKAGES aptitude-r
-      docker-ce=5:18.09.5~3-0~ubuntu-bionic
-
-- name: add package config for elasticsearch
-  copy:
-    dest: '{{ offline_config_dir }}/fai_config/package_config/elasticsearch'
-    content: |
-      PACKAGES aptitude-r
-      openjdk-8-jdk elasticsearch-oss=6.6.0
 
 - name: modify fai-mirror (Codename)
   replace:
@@ -193,22 +175,22 @@
 - name: populate the apt repository
   command: 'fai-mirror -v -b -a amd64 -C {{ offline_config_dir }}/fai_etc {{ offline_content_dir }}/apt_repository'
 
-- name: create offline content directory for docker gpg key
+- name: create offline content directory for docker gpg key (download.docker.com)
   file:
     path: '{{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/'
     state: directory
 
-- name: grab a copy of the docker gpg key
+- name: grab a copy of the docker gpg key (download.docker.com)
   get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
     dest: '{{ offline_content_dir }}/static/download.docker.com/linux/ubuntu/gpg'
 
-- name: create offline content directory for docker gpg key
+- name: create offline content directory for docker gpg key (no hostname)
   file:
     path: '{{ offline_content_dir }}/apt_repository/linux/ubuntu/'
     state: directory
 
-- name: grab a copy of the docker gpg key
+- name: grab a copy of the docker gpg key (no hostname)
   get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
     dest: '{{ offline_content_dir }}/apt_repository/linux/ubuntu/gpg'

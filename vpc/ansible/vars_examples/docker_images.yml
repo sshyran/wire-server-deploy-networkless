@@ -55,34 +55,34 @@ docker_images:
     tag: '2124-2.0.2-df000b-v0.24.26-production'
   brig:
     name: 'quay.io/wire/brig'
-    tag: '2.83.0'
+    tag: '2.88.0'
   cannon:
     name: 'quay.io/wire/cannon'
-    tag: '2.83.0'
+    tag: '2.88.0'
   alpine:
     name: 'docker.io/library/alpine'
     tag: 'latest'
   cargohold:
     name: 'quay.io/wire/cargohold'
-    tag: '2.83.0'
+    tag: '2.88.0'
   gundeck-schema:
     name: 'quay.io/wire/gundeck-schema'
-    tag: '2.83.0'
+    tag: '2.88.0'
   brig-schema:
     name: 'quay.io/wire/brig-schema'
-    tag: '2.83.0'
+    tag: '2.88.0'
   brig-index:
     name: 'quay.io/wire/brig-index'
-    tag: '2.83.0'
+    tag: '2.88.0'
   galley-schema:
     name: 'quay.io/wire/galley-schema'
-    tag: '2.83.0'
+    tag: '2.88.0'
   galley-migrate-data:
     name: 'quay.io/wire/galley-migrate-data'
-    tag: '2.83.0'
+    tag: '2.88.0'
   spar-schema:
     name: 'quay.io/wire/spar-schema'
-    tag: '2.83.0'
+    tag: '2.88.0'
   busybox:
     name: 'docker.io/library/busybox'
     tag: 'latest'
@@ -91,25 +91,25 @@ docker_images:
     tag: 'latest'
   galley:
     name: 'quay.io/wire/galley'
-    tag: '2.83.0'
+    tag: '2.88.0'
   gundeck:
     name: 'quay.io/wire/gundeck'
-    tag: '2.83.0'
+    tag: '2.88.0'
   nginz_disco:
     name: 'quay.io/wire/nginz_disco'
-    tag: '2.83.0'
+    tag: '2.88.0'
   nginz:
     name: 'quay.io/wire/nginz'
-    tag: '2.83.0'
+    tag: '2.88.0'
   proxy:
     name: 'quay.io/wire/proxy'
-    tag: '2.83.0'
+    tag: '2.88.0'
   spar:
     name: 'quay.io/wire/spar'
-    tag: '2.83.0'
+    tag: '2.88.0'
   webapp:
     name: 'quay.io/wire/webapp'
-    tag: '48056-0.1.0-f5e9e8-v0.24.34-production'
+    tag: '53834-0.1.0-4dbb18-v0.24.86-staging'
 
 # used to generate secrets for wire-server:
   alpine-intermediate:
@@ -133,6 +133,20 @@ docker_images:
   defaultbackend-amd64:
     name: 'k8s.gcr.io/defaultbackend-amd64'
     tag: '1.5'
+
+# jetstack/cert-manager
+  cert-manager-controller:
+    name: 'quay.io/jetstack/cert-manager-controller'
+    tag: 'v0.15.2'
+  cert-manager-cainjector:
+    name: 'quay.io/jetstack/cert-manager-cainjector'
+    tag: 'v0.15.2'
+  cert-manager-webhook:
+    name: 'quay.io/jetstack/cert-manager-webhook'
+    tag: 'v0.15.2'
+  cert-manager-acmesolver:
+    name: 'quay.io/jetstack/cert-manager-acmesolver'
+    tag: 'v0.15.2'
 
 # fluent-bit
   fluent-bit:
@@ -198,7 +212,7 @@ docker_images:
     tag: '2.77.0'
   stern:
     name: 'quay.io/wire/stern'
-    tag: '2.83.0'
+    tag: '2.88.0'
 
 # calling-test:
   calling-test:
