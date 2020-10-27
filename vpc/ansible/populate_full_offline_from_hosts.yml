@@ -40,11 +40,16 @@
           tags:
             - update_helm_charts
       tags: update_helm_charts
+    - name: create github repos on remote target
+      include_tasks:
+        file: populate_github_repos-tasks.yml
+        apply:
+          tags:
+            - update_github_repos
+      tags: update_github_repos
     - name: create helm2 repo on remote target
       include_tasks: populate_helm2_repo-tasks.yml
-    - name: create github repos on remote target
-      include_tasks: populate_github_repos-tasks.yml
-    - name: create poe repo on remote target
+    - name: create ansible galaxy repo on remote target
       include_tasks: populate_ansible_galaxy_repo-tasks.yml
     - name: download kubernetes static content on target host
       include_tasks: populate_kubernetes_static_content-tasks.yml
